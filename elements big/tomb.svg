@@ -1,0 +1,474 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="107.29926mm"
+   height="107.2992mm"
+   viewBox="0 0 107.29926 107.2992"
+   version="1.1"
+   id="svg1"
+   xml:space="preserve"
+   sodipodi:docname="P1.svg"
+   inkscape:version="1.3.1 (91b66b0783, 2023-11-16)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"><sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     inkscape:zoom="0.075697471"
+     inkscape:cx="7569.6056"
+     inkscape:cy="3692.3294"
+     inkscape:window-width="1876"
+     inkscape:window-height="1032"
+     inkscape:window-x="44"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" /><defs
+     id="defs1"><style
+       id="style1">
+      .cls-1, .cls-2, .cls-3, .cls-4, .cls-5, .cls-6, .cls-7, .cls-8 {
+        fill: none;
+      }
+
+      .cls-9 {
+        letter-spacing: .024em;
+      }
+
+      .cls-10 {
+        font-size: 1.973px;
+      }
+
+      .cls-10, .cls-11, .cls-12, .cls-13, .cls-14, .cls-15, .cls-16 {
+        fill: #231f20;
+      }
+
+      .cls-10, .cls-17, .cls-18, .cls-19, .cls-20, .cls-21, .cls-16 {
+        font-family: Arial-BoldMT, Arial;
+        font-weight: 700;
+      }
+
+      .cls-22 {
+        letter-spacing: .05em;
+      }
+
+      .cls-23 {
+        letter-spacing: .05em;
+      }
+
+      .cls-2 {
+        stroke: #26aae1;
+        stroke-dasharray: 0 0 4.006 4.006;
+      }
+
+      .cls-2, .cls-8 {
+        stroke-miterlimit: 10;
+      }
+
+      .cls-24 {
+        letter-spacing: -.005em;
+      }
+
+      .cls-25 {
+        letter-spacing: -.043em;
+      }
+
+      .cls-11, .cls-12, .cls-13, .cls-14, .cls-15 {
+        font-family: ArialMT, Arial;
+      }
+
+      .cls-26 {
+        letter-spacing: 0em;
+      }
+
+      .cls-27 {
+        letter-spacing: 0em;
+      }
+
+      .cls-28 {
+        letter-spacing: .016em;
+      }
+
+      .cls-29 {
+        letter-spacing: .013em;
+      }
+
+      .cls-12 {
+        letter-spacing: -.018em;
+      }
+
+      .cls-30, .cls-19 {
+        fill: #f7a31a;
+      }
+
+      .cls-31 {
+        fill: #eb1d27;
+      }
+
+      .cls-32, .cls-33 {
+        fill: #fff;
+      }
+
+      .cls-34 {
+        fill: #cecfd0;
+      }
+
+      .cls-35, .cls-36 {
+        fill: #4e494b;
+      }
+
+      .cls-17 {
+        fill: #ec1e28;
+      }
+
+      .cls-17, .cls-18, .cls-19 {
+        font-size: 1.94px;
+      }
+
+      .cls-18 {
+        fill: #2ba6de;
+      }
+
+      .cls-37 {
+        font-size: 2.286px;
+      }
+
+      .cls-37, .cls-38 {
+        fill: #000100;
+        font-family: Arial-Black, 'Arial Black';
+        font-weight: 800;
+      }
+
+      .cls-39 {
+        font-size: 2.063px;
+      }
+
+      .cls-40 {
+        letter-spacing: -.055em;
+      }
+
+      .cls-13 {
+        letter-spacing: -.037em;
+      }
+
+      .cls-3, .cls-7 {
+        stroke: #2da6de;
+        stroke-width: .5px;
+      }
+
+      .cls-14 {
+        letter-spacing: -.074em;
+      }
+
+      .cls-4, .cls-5, .cls-8 {
+        stroke-width: .492px;
+      }
+
+      .cls-4, .cls-6 {
+        stroke: red;
+      }
+
+      .cls-5 {
+        stroke: #929497;
+      }
+
+      .cls-20 {
+        fill: #929497;
+        font-size: 1.94px;
+      }
+
+      .cls-21 {
+        fill: #ea1c24;
+      }
+
+      .cls-38 {
+        font-size: 2.315px;
+      }
+
+      .cls-41 {
+        opacity: .5;
+      }
+
+      .cls-36, .cls-42, .cls-33, .cls-43 {
+        fill-rule: evenodd;
+      }
+
+      .cls-42 {
+        fill: #b5d133;
+      }
+
+      .cls-15 {
+        letter-spacing: 0em;
+      }
+
+      .cls-44 {
+        letter-spacing: -.017em;
+      }
+
+      .cls-7 {
+        stroke-dasharray: 0 0 2.234 2.234;
+      }
+
+      .cls-16 {
+        font-size: 1.916px;
+      }
+
+      .cls-8 {
+        stroke: #f7a31a;
+      }
+
+      .cls-45 {
+        letter-spacing: -.026em;
+      }
+    </style><style
+       id="style1-4">
+      .cls-1, .cls-2, .cls-3, .cls-4, .cls-5, .cls-6, .cls-7, .cls-8 {
+        fill: none;
+      }
+
+      .cls-9 {
+        letter-spacing: .024em;
+      }
+
+      .cls-10 {
+        font-size: 1.973px;
+      }
+
+      .cls-10, .cls-11, .cls-12, .cls-13, .cls-14, .cls-15, .cls-16 {
+        fill: #231f20;
+      }
+
+      .cls-10, .cls-17, .cls-18, .cls-19, .cls-20, .cls-21, .cls-16 {
+        font-family: Arial-BoldMT, Arial;
+        font-weight: 700;
+      }
+
+      .cls-22 {
+        letter-spacing: .05em;
+      }
+
+      .cls-23 {
+        letter-spacing: .05em;
+      }
+
+      .cls-2 {
+        stroke: #26aae1;
+        stroke-dasharray: 0 0 4.006 4.006;
+      }
+
+      .cls-2, .cls-8 {
+        stroke-miterlimit: 10;
+      }
+
+      .cls-24 {
+        letter-spacing: -.005em;
+      }
+
+      .cls-25 {
+        letter-spacing: -.043em;
+      }
+
+      .cls-11, .cls-12, .cls-13, .cls-14, .cls-15 {
+        font-family: ArialMT, Arial;
+      }
+
+      .cls-26 {
+        letter-spacing: 0em;
+      }
+
+      .cls-27 {
+        letter-spacing: 0em;
+      }
+
+      .cls-28 {
+        letter-spacing: .016em;
+      }
+
+      .cls-29 {
+        letter-spacing: .013em;
+      }
+
+      .cls-12 {
+        letter-spacing: -.018em;
+      }
+
+      .cls-30, .cls-19 {
+        fill: #f7a31a;
+      }
+
+      .cls-31 {
+        fill: #eb1d27;
+      }
+
+      .cls-32, .cls-33 {
+        fill: #fff;
+      }
+
+      .cls-34 {
+        fill: #cecfd0;
+      }
+
+      .cls-35, .cls-36 {
+        fill: #4e494b;
+      }
+
+      .cls-17 {
+        fill: #ec1e28;
+      }
+
+      .cls-17, .cls-18, .cls-19 {
+        font-size: 1.94px;
+      }
+
+      .cls-18 {
+        fill: #2ba6de;
+      }
+
+      .cls-37 {
+        font-size: 2.286px;
+      }
+
+      .cls-37, .cls-38 {
+        fill: #000100;
+        font-family: Arial-Black, 'Arial Black';
+        font-weight: 800;
+      }
+
+      .cls-39 {
+        font-size: 2.063px;
+      }
+
+      .cls-40 {
+        letter-spacing: -.055em;
+      }
+
+      .cls-13 {
+        letter-spacing: -.037em;
+      }
+
+      .cls-3, .cls-7 {
+        stroke: #2da6de;
+        stroke-width: .5px;
+      }
+
+      .cls-14 {
+        letter-spacing: -.074em;
+      }
+
+      .cls-4, .cls-5, .cls-8 {
+        stroke-width: .492px;
+      }
+
+      .cls-4, .cls-6 {
+        stroke: red;
+      }
+
+      .cls-5 {
+        stroke: #929497;
+      }
+
+      .cls-20 {
+        fill: #929497;
+        font-size: 1.94px;
+      }
+
+      .cls-21 {
+        fill: #ea1c24;
+      }
+
+      .cls-38 {
+        font-size: 2.315px;
+      }
+
+      .cls-41 {
+        opacity: .5;
+      }
+
+      .cls-36, .cls-42, .cls-33, .cls-43 {
+        fill-rule: evenodd;
+      }
+
+      .cls-42 {
+        fill: #b5d133;
+      }
+
+      .cls-15 {
+        letter-spacing: 0em;
+      }
+
+      .cls-44 {
+        letter-spacing: -.017em;
+      }
+
+      .cls-7 {
+        stroke-dasharray: 0 0 2.234 2.234;
+      }
+
+      .cls-16 {
+        font-size: 1.916px;
+      }
+
+      .cls-8 {
+        stroke: #f7a31a;
+      }
+
+      .cls-45 {
+        letter-spacing: -.026em;
+      }
+    </style></defs><g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-1176.4649,-777.7725)"><g
+       id="g470"
+       transform="matrix(0,-2.3578005,2.3578005,0,-17834.175,6147.7292)"><circle
+         style="fill:#ebebeb;fill-opacity:1;stroke-width:6.00001;stroke-linecap:round;stroke-linejoin:round"
+         id="circle464"
+         cx="2254.7739"
+         cy="8085.6245"
+         r="22.754089" /><g
+         id="g469"
+         transform="translate(70.633624,-0.54262281)"><rect
+           style="fill:#ebebeb;fill-opacity:1;stroke:#dedede;stroke-width:5.77;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1"
+           id="rect464"
+           width="29.135572"
+           height="29.13588"
+           x="4158.7954"
+           y="-7276.772"
+           rx="14.567786"
+           ry="14.567782"
+           transform="rotate(135)" /><rect
+           style="fill:none;fill-opacity:1;stroke:#dedede;stroke-width:5.76998;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1"
+           id="rect465"
+           width="10.431372"
+           height="10.431509"
+           x="-22.078732"
+           y="-8381.1504"
+           rx="5.2156858"
+           ry="5.2156982"
+           transform="rotate(165)" /><g
+           id="g466"
+           transform="matrix(-0.90017108,0,0,-0.90017108,4291.5704,14929.953)"
+           style="stroke-width:1.11089"><path
+             style="fill:#969696;fill-opacity:1;stroke:#dedede;stroke-width:6.4099;stroke-linecap:butt;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1"
+             d="m 2341.078,7586.8044 v 10.4299"
+             id="path465" /><path
+             style="fill:#969696;fill-opacity:1;stroke:#dedede;stroke-width:6.4099;stroke-linecap:butt;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1"
+             d="m 2341.2104,7608.2873 v 10.4299"
+             id="path466" /></g><g
+           id="g468"
+           transform="matrix(0,0.90017108,0.90017108,0,-4659.6456,5978.7373)"
+           style="fill:#dedede;fill-opacity:1;stroke-width:1.11089"><path
+             style="fill:#dedede;fill-opacity:1;stroke:#dedede;stroke-width:6.4099;stroke-linecap:butt;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1"
+             d="m 2341.078,7586.8044 v 10.4299"
+             id="path467" /><path
+             style="fill:#dedede;fill-opacity:1;stroke:#dedede;stroke-width:6.4099;stroke-linecap:butt;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1"
+             d="m 2341.2104,7608.2873 v 10.4299"
+             id="path468" /></g></g></g></g></svg>
