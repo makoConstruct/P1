@@ -1,0 +1,1 @@
+This generates the svgs for the cards for the prototype [cohabitive game](https://makopool.com/peacewagers.html), P1. The png files in generated_card_pngs can be dragged into thegamecrafter as mini cards.
