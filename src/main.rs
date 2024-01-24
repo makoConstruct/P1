@@ -1,13 +1,9 @@
-use std::{
-    collections::HashMap,
-    f64::consts::TAU,
-    fs::{read_to_string, write},
-    path::Path,
-    process::Command,
-};
+use std::{fmt::Display, fs::File, io::Write, path::Path, rc::Rc};
 
 mod boring;
 use boring::*;
+
+mod generation;
 
 // #[derive(Serialize)]
 // struct CardFrontParams<'a> {
@@ -20,19 +16,38 @@ use boring::*;
 //     out
 // }
 
-fn elements() -> impl Iterator<Item = ElementTag> {
+pub fn elements() -> impl Iterator<Item = ElementTag> {
     0..8
 }
 
-struct CardSpec {
+pub struct EndCardSpec {
     // likes: Vec<ElementTag>,
     name: String,
-    generate: Box<dyn Fn() -> String>,
+    generate_front: Rc<dyn Fn(&mut dyn Write)>,
+    generate_back: Rc<dyn Fn(&mut dyn Write)>,
+}
+impl EndCardSpec {
+    fn with_back_blured_message(
+        name: String,
+        front_graphic: Rc<dyn Display>,
+        score: usize,
+        back_text: String
+    ) -> Self {
+        let rcd = Rc::new(front_graphic);
+        Self {
+            name,
+            generate_front: {let front_inner = rcd.clone(); Rc::new(move |w| {
+                end_front_outer(&Displaying(|w|end_front_inner(&front_inner, score, w)), w);
+            })},
+            generate_back: Rc::new({let front_inner = rcd.clone(); move |w| {
+                //you have to clone, because this lambda could be called multiple times, meaning it has to retain something to clone from to create the lambda ahead
+                end_backing(&front_inner, w, &back_text);
+            }}),
+        }
+    }
 }
 
 fn main() {
-    // let mut tt = TinyTemplate<'static>::new();
-    // tt.add_template("end_front", &read_to_string(Path::new("card front template.svg")).unwrap());
     {
         //clear dir if present
         if let Ok(dens) = std::fs::read_dir("generated_card_svgs") {
@@ -49,144 +64,15 @@ fn main() {
 
         let mut specs = Vec::new();
 
-        for e in elements() {
-            specs.push(CardSpec {
-                name: format!("{}_1", element_names[e]),
-                generate: Box::new(move || end_front(&(element_g[e])(end_graphic_center, 1.0), 1)),
-            })
-        }
-
-        for e1 in elements() {
-            for e2 in elements() {
-                if e1 >= e2 {
-                    continue;
-                }
-                specs.push(CardSpec {
-                    name: format!("{}_{}", element_names[e1], element_names[e2]),
-                    generate: Box::new(move || end_front(&paired(e1, e2, false), 2)),
-                })
-            }
-        }
-
-        for e in elements() {
-            specs.push(CardSpec {
-                name: format!("just_1_{}", element_names[e]),
-                generate: Box::new(move || {
-                    end_front(
-                        &format!(
-                            "{}\n{}",
-                            &element_g[e](
-                                end_graphic_center + V2::new(0.0, graphic_rad * 0.23),
-                                0.83
-                            ),
-                            &just_1(element_colors_bold(e))
-                        ),
-                        3,
-                    )
-                }),
-            })
-        }
-        for e1 in elements() {
-            for e2 in elements() {
-                for e3 in elements() {
-                    if e1 > e2 || e2 > e3 {
-                        continue;
-                    }
-                    let tilt = -TAU / 24.0;
-                    let arc = TAU / 3.0;
-                    let r = graphic_rad * 0.48;
-                    let scale = 0.5;
-
-                    specs.push(CardSpec {
-                        name: format!(
-                            "{}_{}_{}",
-                            element_names[e1], element_names[e2], element_names[e3]
-                        ),
-                        generate: Box::new(move || {
-                            end_front(
-                                &format!(
-                                    "{}{}{}",
-                                    element_g[e1](
-                                        end_graphic_center + from_angle_mag(tilt, r),
-                                        scale
-                                    ),
-                                    element_g[e2](
-                                        end_graphic_center + from_angle_mag(tilt + arc, r),
-                                        scale
-                                    ),
-                                    element_g[e3](
-                                        end_graphic_center + from_angle_mag(tilt + arc * 2.0, r),
-                                        scale
-                                    ),
-                                ),
-                                2,
-                            )
-                        }),
-                    });
-                }
-            }
-        }
-
-        for e in elements() {
-            specs.push(CardSpec {
-                name: format!("max_{}_cluster", element_names[e]),
-                generate: Box::new(move || {
-                    end_front(
-                        &format!(
-                            "{}{}",
-                            big_splat(element_colors_back[e]),
-                            element_g[e](end_graphic_center, 0.7),
-                        ),
-                        1,
-                    )
-                }),
-            });
-        }
-
-        for e in elements() {
-            specs.push(CardSpec {
-                name: format!("forbid_{}", element_names[e]),
-                generate: Box::new(move || {
-                    end_front(
-                        &format!("{}{}", element_g[e](end_graphic_center, 1.0), negatory(),),
-                        7,
-                    )
-                }),
-            })
-        }
-
-        for e in elements() {
-            specs.push(CardSpec {
-                name: format!("forbid_{}", element_names[e]),
-                generate: Box::new(move || {
-                    end_front(
-                        &format!("{}{}", element_g[e](end_graphic_center, 1.0), negatory(),),
-                        13,
-                    )
-                }),
-            });
-        }
-
-        for e1 in elements() {
-            for e2 in elements() {
-                if e1 < e2 {
-                    continue;
-                }
-                specs.push(CardSpec {
-                    name: format!("forbid_{}_{}", element_names[e1], element_names[e2]),
-                    generate: Box::new(move || {
-                        end_front(&format!("{}{}", paired(e1, e2, true), negatory()), 9)
-                    }),
-                });
-            }
-        }
+        generation::generate_specs(&mut specs);
 
         for spec in specs.iter() {
-            write(
-                Path::new(&format!("{}.svg", &spec.name)),
-                &(spec.generate)(),
-            )
-            .unwrap();
+            (spec.generate_front)(
+                &mut File::create(Path::new(&format!("{}[front].svg", &spec.name))).unwrap(),
+            );
+            (spec.generate_back)(
+                &mut File::create(Path::new(&format!("{}[back].svg", &spec.name))).unwrap(),
+            );
         }
 
         std::env::set_current_dir("../").unwrap();
