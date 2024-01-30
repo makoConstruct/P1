@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="27.289289mm"
+   height="47.013699mm"
+   viewBox="0 0 27.28929 47.013698"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.3.1 (91b66b0783, 2023-11-16)"
+   sodipodi:docname="dead guy.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     inkscape:zoom="2.222788"
+     inkscape:cx="52.636598"
+     inkscape:cy="107.74757"
+     inkscape:window-width="1876"
+     inkscape:window-height="1032"
+     inkscape:window-x="44"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs1" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(1.4e-4)">
+    <g
+       id="g1"
+       transform="translate(-845.75546,-1659.1663)">
+      <path
+         id="path62"
+         style="fill:#575757;fill-opacity:1;stroke:none;stroke-width:2.62925;stroke-linecap:round;stroke-linejoin:round"
+         d="m 859.39997,1659.1663 c -7.55909,0 -13.64465,6.0858 -13.64465,13.6447 v 1.4459 5.1759 3.0649 0.3509 3.0649 5.1759 1.4459 c 0,7.5589 6.08556,13.6447 13.64465,13.6447 7.55912,0 13.64464,-6.0858 13.64464,-13.6447 v -1.4459 -5.1759 -3.0649 -0.3509 -3.0649 -5.1759 -1.4459 c 0,-7.5589 -6.08552,-13.6447 -13.64464,-13.6447 z m -0.001,2.9993 c 5.94899,0 10.64482,4.6953 10.64482,10.6443 v 1.4475 5.1754 3.4163 3.0644 5.1754 1.4475 c 0,5.949 -4.69583,10.6443 -10.64482,10.6443 -5.94901,0 -10.64432,-4.6953 -10.64432,-10.6443 v -1.4475 -5.1754 -3.0644 -0.3519 -3.0644 -5.1754 -1.4475 c 0,-5.949 4.69531,-10.6443 10.64432,-10.6443 z m -4.27054,3.5393 -2.70216,2.7022 4.27105,4.2716 -4.27105,4.271 2.70216,2.7027 4.27157,-4.2716 4.27106,4.2716 2.70216,-2.7027 -4.27106,-4.271 4.27106,-4.2716 -2.70216,-2.7022 -4.27106,4.2711 z" />
+    </g>
+  </g>
+</svg>

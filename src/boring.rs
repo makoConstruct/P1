@@ -2,11 +2,14 @@
 
 use elementtree::WriteOptions;
 use nalgebra::{Rotation2, Vector2};
-use std::{f64::consts::TAU, process::Command, io::Write, fmt::Display};
+use std::{
+    f64::consts::TAU, fmt::Display, io::Write, mem::swap, path::{Path, PathBuf}, process::Command, rc::Rc
+};
 
 pub fn from_angle_mag(angle: f64, mag: f64) -> V2 {
     V2::new(angle.cos() * mag, angle.sin() * mag)
 }
+pub fn both_dims(v:f64)-> V2 { V2::new(v,v) }
 
 pub fn render_png(name: &str) {
     let mut c = Command::new("inkscape");
@@ -15,8 +18,11 @@ pub fn render_png(name: &str) {
     c.output();
 }
 
-pub struct Displaying<F:Fn(&mut dyn Write)>(pub F);
-impl<F> Display for Displaying<F> where F: Fn(&mut dyn Write) {
+pub struct Displaying<F: Fn(&mut dyn Write)>(pub F);
+impl<F> Display for Displaying<F>
+where
+    F: Fn(&mut dyn Write),
+{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let r = assume_writes_utf8(&self.0);
         f.write_str(&r).into()
@@ -33,11 +39,27 @@ pub const LAKE_I: usize = 4;
 pub const ICE_I: usize = 5;
 pub const TOMB_I: usize = 6;
 pub const VOID_I: usize = 7;
+pub fn opposite_element(e: ElementTag) -> ElementTag {
+    match e {
+        FIELD_I => FOREST_I,
+        FOREST_I => FIELD_I,
+        MOUNTAIN_I => VOLCANO_I,
+        VOLCANO_I => MOUNTAIN_I,
+        LAKE_I => ICE_I,
+        ICE_I => LAKE_I,
+        TOMB_I => VOID_I,
+        VOID_I => TOMB_I,
+        _ => panic!("invalid ElementTag"),
+    }
+}
 pub const element_g: [ElementGenerator; 8] = [
     field_g, forest_g, mountain_g, volcano_g, lake_g, ice_g, tomb_g, void_g,
 ];
 pub const element_names: [&'static str; 8] = [
     "field", "forest", "mountain", "volcano", "lake", "ice", "tomb", "void",
+];
+pub const element_pair_names: [&'static str; 4] = [
+    "field/forest", "mountain/volcano", "lake/ice", "tomb/void",
 ];
 pub const element_colors_back: [&'static str; 8] = [
     "b5efb9", "94cf9c", "eeeca7", "efcfcf", "c3edf1", "e1eff0", "ebebeb", "969696",
@@ -103,7 +125,7 @@ fn offset_for_grav_scale(anchor: V2, grav: Gravity, bounds: V2, scale: f64) -> V
     anchor - (grav + V2::new(1.0, 1.0)).component_mul(&(scale * bounds / 2.0))
 }
 
-pub fn field_g(center: V2, scale: f64, to:&mut dyn Write) {
+pub fn field_g(center: V2, scale: f64, to: &mut dyn Write) {
     let offset = center - scale * BIG_ELEMENT_DIMENSIONS / 2.0;
     let color_back = element_colors_back[FIELD_I];
     let color_front = ELEMENT_COLORS_FRONT[FIELD_I];
@@ -182,7 +204,7 @@ pub fn field_g(center: V2, scale: f64, to:&mut dyn Write) {
         offset.x, offset.y, scale
     ).unwrap();
 }
-pub fn forest_g(center: V2, scale: f64, to:&mut dyn Write) {
+pub fn forest_g(center: V2, scale: f64, to: &mut dyn Write) {
     let offset = center - scale * BIG_ELEMENT_DIMENSIONS / 2.0;
     let color_back = element_colors_back[FOREST_I];
     let color_front = ELEMENT_COLORS_FRONT[FOREST_I];
@@ -225,7 +247,7 @@ pub fn forest_g(center: V2, scale: f64, to:&mut dyn Write) {
         offset.x, offset.y, scale
     ).unwrap()
 }
-pub fn volcano_g(center: V2, scale: f64, to:&mut dyn Write) {
+pub fn volcano_g(center: V2, scale: f64, to: &mut dyn Write) {
     let offset = center - scale * BIG_ELEMENT_DIMENSIONS / 2.0;
     write!(to,
         r#"<g transform="translate({},{}) scale({})"><g
@@ -262,7 +284,7 @@ pub fn volcano_g(center: V2, scale: f64, to:&mut dyn Write) {
         offset.x, offset.y, scale
     ).unwrap()
 }
-pub fn mountain_g(center: V2, scale: f64, to:&mut dyn Write) {
+pub fn mountain_g(center: V2, scale: f64, to: &mut dyn Write) {
     let offset = center - scale * BIG_ELEMENT_DIMENSIONS / 2.0;
     write!(to,
         r#"<g transform="translate({},{}) scale({})"><g
@@ -293,7 +315,7 @@ pub fn mountain_g(center: V2, scale: f64, to:&mut dyn Write) {
         offset.x, offset.y, scale
     ).unwrap()
 }
-pub fn lake_g(center: V2, scale: f64, to:&mut dyn Write) {
+pub fn lake_g(center: V2, scale: f64, to: &mut dyn Write) {
     let offset = center - scale * BIG_ELEMENT_DIMENSIONS / 2.0;
     write!(to,
         r#"<g transform="translate({},{}) scale({})"><g
@@ -320,7 +342,7 @@ pub fn lake_g(center: V2, scale: f64, to:&mut dyn Write) {
         offset.x, offset.y, scale
     ).unwrap()
 }
-pub fn ice_g(center: V2, scale: f64, to:&mut dyn Write) {
+pub fn ice_g(center: V2, scale: f64, to: &mut dyn Write) {
     let offset = center - scale * BIG_ELEMENT_DIMENSIONS / 2.0;
     write!(to,
         r#"<g transform="translate({},{}) scale({})"><g
@@ -347,7 +369,7 @@ pub fn ice_g(center: V2, scale: f64, to:&mut dyn Write) {
         offset.x, offset.y, scale
     ).unwrap()
 }
-pub fn void_g(center: V2, scale: f64, to:&mut dyn Write) {
+pub fn void_g(center: V2, scale: f64, to: &mut dyn Write) {
     let offset = center - scale * BIG_ELEMENT_DIMENSIONS / 2.0;
     write!(to,
         r#"<g transform="translate({},{}) scale({})"><g
@@ -375,7 +397,7 @@ pub fn void_g(center: V2, scale: f64, to:&mut dyn Write) {
         offset.x, offset.y, scale
     ).unwrap()
 }
-pub fn tomb_g(center: V2, scale: f64, to:&mut dyn Write) {
+pub fn tomb_g(center: V2, scale: f64, to: &mut dyn Write) {
     let offset = center - scale * BIG_ELEMENT_DIMENSIONS / 2.0;
     write!(to,
         r#"<g transform="translate({},{}) scale({})"><g
@@ -433,7 +455,7 @@ pub fn tomb_g(center: V2, scale: f64, to:&mut dyn Write) {
     ).unwrap();
 }
 
-pub fn end_front_inner(inserting: &impl Display, scores: usize, to:&mut dyn Write) {
+pub fn end_front_inner(inserting: &impl Display, scores: String, to: &mut dyn Write) {
     write!(to,
 r##"<g
      inkscape:label="Layer 1"
@@ -476,13 +498,80 @@ r##"<g
   </g>"##,
     ).unwrap();
 }
-
-pub fn end_front(inserting: &impl Display, scores: usize, to:&mut dyn Write) {
-    end_front_outer(&Displaying(|w:&mut dyn Write| end_front_inner(inserting, scores, w)), to);
+pub struct CardSpec {
+    // likes: Vec<ElementTag>,
+    pub name: String,
+    pub generate_front: Rc<dyn Fn(&mut dyn Write)>,
+    pub generate_back: Rc<dyn Fn(&mut dyn Write)>,
 }
-pub fn end_front_outer(inserting: &impl Display, to:&mut dyn Write) {
-    write!(to,
-r##"<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+impl CardSpec {
+    pub fn means_card_with_back_blurred_message(
+        name: String,
+        filename: Option<String>,
+        front_graphic: Rc<dyn Fn(&mut dyn Write)>,
+        back_text: String,
+    ) -> Self {
+        let filename = if let Some(n) = filename { n } else { name.clone() };
+        Self {
+            name: filename,
+            generate_front: {
+                let front_graphic = front_graphic.clone();
+                let name = name.clone();
+                Rc::new(move |w| means_front(&Displaying(|w| front_graphic(w)), &name, w))
+            },
+            generate_back: Rc::new(move |w| {
+                backing(&Displaying(|w| front_graphic(w)), w, &back_text)
+            }),
+        }
+    }
+    pub fn end_card_with_back_blurred_message(
+        name: String,
+        front_graphic: Rc<dyn Display>,
+        score: String,
+        back_text: String,
+    ) -> Self {
+        let rcd = Rc::new(front_graphic);
+        let sc = score.clone();
+        Self {
+            name,
+            generate_front: {
+                let front_inner = rcd.clone();
+                Rc::new(move |w| {
+                    let scc = sc.clone();
+                    end_front_outer(
+                        &Displaying(|w| end_front_inner(&front_inner, scc.clone(), w)),
+                        w,
+                    );
+                })
+            },
+            generate_back: Rc::new({
+                let front_inner = rcd.clone();
+                move |w| {
+                    //you have to clone, because this lambda could be called multiple times, meaning it has to retain something to clone from to create the lambda ahead
+                    end_backing(&front_inner, w, &back_text);
+                }
+            }),
+        }
+    }
+}
+
+pub fn end_front(inserting: &impl Display, scores: String, to: &mut dyn Write) {
+    end_front_outer(
+        &Displaying(move |w: &mut dyn Write| end_front_inner(inserting, scores.clone(), w)),
+        to,
+    );
+}
+
+pub fn end_front_outer(inserting: &impl Display, to: &mut dyn Write) {
+    front_outer(inserting, to);
+}
+pub fn means_front_outer(inserting: &impl Display, to: &mut dyn Write) {
+    front_outer(inserting, to);
+}
+pub fn front_outer(inserting: &impl Display, to: &mut dyn Write) {
+    write!(
+        to,
+        r##"<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!-- Created partially with Inkscape (http://www.inkscape.org/) but primarily through codegen -->
 
 <svg
@@ -521,11 +610,14 @@ r##"<?xml version="1.0" encoding="UTF-8" standalone="no"?>
   {inserting}
 </svg>
 "##,
-    ).unwrap();
+    )
+    .unwrap();
 }
 
-
-pub fn end_backing(inserting: &impl Display, to:&mut dyn Write, description:&str) {
+pub fn end_backing(inserting: &impl Display, to: &mut dyn Write, description: &str) {
+    backing(inserting, to, description);
+}
+pub fn backing(inserting: &impl Display, to: &mut dyn Write, description: &str) {
     let span = CARD_DIMENSIONS.x;
     write!(to,
 r##"<?xml version="1.0" encoding="UTF-8" standalone="no"?>
@@ -614,8 +706,7 @@ r##"<?xml version="1.0" encoding="UTF-8" standalone="no"?>
     ).unwrap();
 }
 
-
-pub fn just_1(color: &str, to:&mut dyn Write) {
+pub fn just_1(color: &str, to: &mut dyn Write) {
     let scale = 1.5;
     let offset = offset_for_grav(
         END_GRAPHIC_CENTER - V2::new(0.0, 0.23 * GRAPHIC_RAD),
@@ -644,7 +735,7 @@ pub fn just_1(color: &str, to:&mut dyn Write) {
     ).unwrap()
 }
 
-pub fn big_splat(color: &str, to:&mut dyn Write) {
+pub fn big_splat(color: &str, to: &mut dyn Write) {
     let scale = 0.54;
     let offset = offset_for_grav_scale(
         END_GRAPHIC_CENTER,
@@ -667,7 +758,7 @@ pub fn big_splat(color: &str, to:&mut dyn Write) {
     ).unwrap()
 }
 
-pub fn negatory(to:&mut dyn Write) {
+pub fn negatory(to: &mut dyn Write) {
     // let scale = 0.54;
     let offset = offset_for_grav(END_GRAPHIC_CENTER, MIDDLE_MIDDLE, V2::new(122.431, 78.813));
     write!(to,
@@ -691,37 +782,81 @@ pub fn negatory(to:&mut dyn Write) {
     ).unwrap();
 }
 
-pub fn paired(e1: ElementTag, e2: ElementTag, flipped: bool, to:&mut dyn Write) {
+pub fn tilted_pair(center: V2, distance: f64) -> (V2, V2) {
+    //left-bottom, right-top
+    let tilt = -TAU / 12.0;
+    let outv = from_angle_mag(tilt, distance);
+    let c1 = center - outv;
+    let c2 = center + outv;
+    (c1, c2)
+}
+
+pub fn paired(e1: ElementTag, e2: ElementTag, flipped: bool, to: &mut dyn Write) {
     let sized = 0.6;
-    let spaced = 0.1;
-    let mut tilt = -TAU / 12.0;
+    let spaced = 0.04;
+    let (mut c1, mut c2) = tilted_pair(END_GRAPHIC_CENTER, (sized + spaced) * BIG_ELEMENT_RAD);
     if flipped {
-        tilt = -tilt;
+        std::mem::swap(&mut c1.y, &mut c2.y);
     }
-    let outv = from_angle_mag(tilt, (sized + spaced) * BIG_ELEMENT_RAD);
-    let c1 = END_GRAPHIC_CENTER - outv;
-    let c2 = END_GRAPHIC_CENTER + outv;
     element_g[e1](c1, sized, to);
     element_g[e2](c2, sized, to);
 }
 
-struct Rect {
+#[derive(Clone)]
+pub struct Rect {
     ul: V2,
     br: V2,
 }
 impl Rect {
-    fn from_center_radii(center: V2, radii: V2) -> Self {
+    pub fn from_center_radii(center: V2, radii: V2) -> Self {
         Self {
             ul: center - radii,
             br: center + radii,
         }
     }
-    fn width(&self)-> f64 { self.br.x - self.ul.x }
-    fn height(&self)-> f64 { self.br.y - self.ul.y }
+    pub fn width(&self) -> f64 {
+        self.br.x - self.ul.x
+    }
+    pub fn height(&self) -> f64 {
+        self.br.y - self.ul.y
+    }
+    pub fn center(&self) -> V2 {
+        (self.ul + self.br) / 2.0
+    }
+    pub fn span(&self) -> V2 {
+        self.br - self.ul
+    }
+    pub fn reduced_by(&self, margin: f64) -> Rect {
+        let mars = V2::new(margin, margin);
+        Rect {
+            ul: self.ul + mars,
+            br: self.br - mars,
+        }
+    }
+    ///specifically it's reduced by a proportion of the smallest dimension
+    pub fn shrunk(&self, to_proportion:f64)-> Rect {
+        self.reduced_by(self.span().min()*(1.0 - to_proportion)/2.0)
+    }
 }
 
-fn end_graphic_usual_bounds() -> Rect {
+pub fn end_graphic_usual_bounds() -> Rect {
     Rect::from_center_radii(END_GRAPHIC_CENTER, V2::from_element(GRAPHIC_RAD))
+}
+pub fn means_graphic_usual_bounds() -> Rect {
+    let ul = V2::new(9.922, 9.922);
+    Rect {
+        ul,
+        br: ul + V2::new(138.906, 162.991),
+    }
+}
+pub fn card_upper_center() -> V2 {
+    V2::new(CARD_DIMENSIONS.x / 2.0, CARD_DIMENSIONS.x / 2.0)
+}
+pub fn card_lower_center() -> V2 {
+    V2::new(
+        CARD_DIMENSIONS.x / 2.0,
+        CARD_DIMENSIONS.y - CARD_DIMENSIONS.x / 2.0,
+    )
 }
 
 // //wait, this would break if you had nested svg elements. Fuck streaming parsers.
@@ -735,12 +870,12 @@ fn end_graphic_usual_bounds() -> Rect {
 //     reader.trim_text(true);
 //     let mut writer = Writer::new(Cursor::new(Vec::new()));
 //     let mut bounds:Option<V2> = None;
-    
+
 //     'outer: loop {
 //         if let Event::Start(e) = reader.read_event()? {
 //             if &e.name().as_ref() == "svg" {
 //                 writer.write_event(e);
-                
+
 //                 loop {
 //                     let e = reader.read_event()?;
 //                     writer.write_event(e);
@@ -753,36 +888,458 @@ fn end_graphic_usual_bounds() -> Rect {
 //             }
 //         }
 //     }
-    
+
 //     Ok((String::from_utf8(writer.into_inner().into_inner())?, bounds.ok_or("couldn't find width and height".to_string())?))
 // }
 
-fn assume_writes_utf8(f:impl Fn(&mut dyn Write))-> String {
+pub fn assume_writes_utf8(f: impl Fn(&mut dyn Write)) -> String {
     let mut w = Vec::<u8>::new();
     f(&mut w);
     String::from_utf8(w).unwrap()
 }
 
-pub fn for_asset(at: &std::path::Path, scores:usize, to: &mut impl Write) {
-    let assetxml = elementtree::Element::from_reader(&std::fs::File::open(&at).unwrap()).unwrap();
-    let svgel = assetxml
-        .find("svg")
-        .expect("svg element");
-    let bounds = V2::new(
-        str::parse(&svgel.get_attr("width").unwrap()).unwrap(),
-        str::parse(&svgel.get_attr("height").unwrap()).unwrap(),
-    );
-    //scale proportionally to fit
-    let placement_bounds = end_graphic_usual_bounds();
-    let scale = placement_bounds.width()/bounds.x .max( placement_bounds.height()/bounds.y);
-    let offset = placement_bounds.ul + (1.0 - scale)*bounds/2.0;
-    let svgelstr = assume_writes_utf8(|w| svgel.to_writer_with_options(w, WriteOptions::new().set_xml_prolog(None)).unwrap());
-    let inserting = Displaying(move |w: &mut dyn Write|{
-        write!(w, r##"<g translate="transform({},{}) scale({})>{}</g>""##, offset.x, offset.y, scale, &svgelstr).unwrap();
-    });
-    end_front(&inserting, scores, to);
+#[derive(Clone)]
+pub struct Asset {
+    pub render: Rc<dyn Fn(V2, f64, &mut dyn Write)>,
+    pub bounds: V2,
+}
+impl Asset {
+    pub fn center_in_bounds(&self, bounds: Rect, to: &mut dyn Write) {
+        let scale = (bounds.width() / self.bounds.x).min(bounds.height() / self.bounds.y);
+        self.by_grav(bounds.center(), MIDDLE_MIDDLE, scale, to);
+    }
+    pub fn centered(&self, at:V2, scale:f64, to: &mut dyn Write){
+        self.by_grav(at, MIDDLE_MIDDLE, scale, to);
+    }
+    pub fn by_grav(&self, anchor: V2, grav: Gravity, scale: f64, to: &mut dyn Write) {
+        self.by_ul(
+            offset_for_grav(anchor, grav, self.bounds * scale),
+            scale,
+            to,
+        );
+    }
+    pub fn by_anchor(
+        &self,
+        anchor_screenspace: V2,
+        anchor_within: V2,
+        scale: f64,
+        to: &mut dyn Write,
+    ) {
+        let ul = anchor_screenspace - anchor_within * scale;
+        self.by_ul(ul, scale, to);
+    }
+    pub fn by_ul(&self, ul: V2, scale: f64, to: &mut dyn Write) {
+        (self.render)(ul, scale, to);
+    }
 }
 
-// pub fn flipped_horizontally(d:&dyn Display, span:f64, w:&mut dyn Write){
-//     write!(w, r##"<g transform="matrix(-1,0,0, 1,{},0)">{}</g>"##, span, d);
-// }
+pub fn load_asset(at: &Path) -> Asset {
+    // pub fn for_asset(at: &std::path::Path) -> Rc<dyn Display> {
+    let assetxml = elementtree::Element::from_reader(&std::fs::File::open(at).unwrap()).unwrap();
+    //lol, turns out the comment isn't an element so the entire document is just the root element (what if a document contains multiple root elements? Is that not allowed?)
+    let svgel = &assetxml;
+    fn ignore_unit(v: &str) -> &str {
+        v.split_at(v.len() - 2).0
+    }
+    let bounds = V2::new(
+        str::parse(ignore_unit(&svgel.get_attr("width").unwrap())).unwrap(),
+        str::parse(ignore_unit(&svgel.get_attr("height").unwrap())).unwrap(),
+    );
+    // for se in assetxml.children() { println!("{}", se.tag() ) }
+    if let Some(defel) = svgel.find("{http://www.w3.org/2000/svg}defs") {
+        if defel.child_count() != 0 {
+            println!(
+                "warning: there were defs in {:?}, we don't handle those",
+                at
+            );
+        }
+    }
+    let graphicel = svgel.find("{http://www.w3.org/2000/svg}g").unwrap();
+    //scale proportionally to fit
+    // let placement_bounds = end_graphic_usual_bounds().reduced_by(0.3 * GRAPHIC_RAD);
+    // let scale = (placement_bounds.width() / bounds.x).min(placement_bounds.height() / bounds.y);
+    // let offset = placement_bounds.ul + (1.0 - scale) * bounds / 2.0;
+
+    // let offset = placement_bounds.ul + placement_bounds.span() / 2.0 - (bounds * scale) / 2.0;
+
+    let graphic_str = assume_writes_utf8(|w| {
+        graphicel
+            .to_writer_with_options(w, WriteOptions::new().set_xml_prolog(None))
+            .unwrap()
+    });
+    Asset {
+        render: Rc::new(move |ul: V2, scale: f64, to: &mut dyn Write| {
+            write!(
+                to,
+                r##"<g transform="translate({},{}) scale({})">{}</g>"##,
+                ul.x, ul.y, scale, &graphic_str
+            )
+            .unwrap();
+        }),
+        bounds,
+    }
+}
+
+macro_rules ! assets {
+    ($($names:ident),*)=> {
+        pub struct SvgAssets {
+            $(pub $names: Asset),*
+        }
+        impl SvgAssets {
+            pub fn load(assets_dir:&Path)-> Self {
+                Self {
+                    $(
+                        $names: load_asset(&assets_dir.join(format!("{}.svg", stringify!($names))))
+                    ),*
+                }
+            }
+            pub fn element(&self, e: ElementTag) -> &Asset {
+                match e {
+                    FIELD_I => &self.field,
+                    FOREST_I => &self.forest,
+                    MOUNTAIN_I => &self.mountain,
+                    VOLCANO_I => &self.volcano,
+                    LAKE_I => &self.lake,
+                    ICE_I => &self.ice,
+                    TOMB_I => &self.tomb,
+                    VOID_I => &self.void,
+                    _ => panic!("no such element as {e}"),
+                }
+            }
+            // pub fn element_both(&self, e:ElementTag)-> &Asset {
+            //     match e {
+            //         FIELD_I => &self.field_forest,
+            //         MOUNTAIN_I => &self.mountain_volcano,
+            //         LAKE_I => &self.lake_ice,
+            //         TOMB_I => &self.tomb_void,
+            //         _=> panic!("{} is an invalid tag for a pair of elements", element_names[e])
+            //     }
+            // }
+        }
+    }
+}
+
+assets!(
+    kill, guy, dead_guy, altruism, field, forest, mountain, volcano, lake, ice, tomb, void, blank, come_on_down, back_colored_circle
+);
+
+//flipping *to*
+pub struct GeneratedAssets{
+    pub flip_field:Asset,
+    pub flip_forest:Asset,
+    pub flip_mountain:Asset,
+    pub flip_volcano:Asset,
+    pub flip_lake:Asset,
+    pub flip_ice:Asset,
+    pub flip_tomb:Asset,
+    pub flip_void:Asset,
+}
+
+pub struct AllAssets{ pub generated:Rc<GeneratedAssets>, pub svg:Rc<SvgAssets> }
+
+impl AllAssets {
+    pub fn flip_to(&self, e:ElementTag)-> &Asset {
+        match e {
+            FIELD_I => &self.generated.flip_field,
+            FOREST_I => &self.generated.flip_forest,
+            LAKE_I => &self.generated.flip_lake,
+            ICE_I => &self.generated.flip_ice,
+            TOMB_I => &self.generated.flip_tomb,
+            VOID_I => &self.generated.flip_void,
+            MOUNTAIN_I => &self.generated.flip_mountain,
+            VOLCANO_I => &self.generated.flip_volcano,
+            _=> panic!("{e} is not an element tag")
+        }
+    }
+}
+
+pub fn for_asset(at: PathBuf) -> Displaying<impl Fn(&mut dyn Write)> {
+    Displaying(move |w: &mut dyn Write| {
+        load_asset(&at).center_in_bounds(end_graphic_usual_bounds(), w)
+    })
+}
+
+//end ends stuff, begin means
+
+pub fn means_backing(inserting: &impl Display, to: &mut dyn Write, description: &str) {
+    end_backing(inserting, to, description);
+}
+
+pub fn guylike(asset: &Asset, base_centered: V2, scale: f64, to: &mut dyn Write) {
+    let bx = asset.bounds.x / 2.0;
+    asset.by_anchor(base_centered, V2::new(bx, asset.bounds.y - bx), scale, to);
+}
+
+pub fn blank_front(inserting: &impl Display, color:&str, rotate:bool, to: &mut dyn Write) {
+    card_front_outer(inserting, "", color, rotate, to);
+}
+pub fn means_front(inserting: &impl Display, name: &str, to: &mut dyn Write) {
+    let background_color = "f1f2f2";
+    card_front_outer(inserting, name, background_color, false, to);
+}
+pub fn card_front_outer(inserting: &impl Display, name: &str, background_color:&str, rotate:bool, to: &mut dyn Write) {
+    let rotation = if rotate { "90" } else { "0" };
+    write!(to, r##"<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created partially with Inkscape (http://www.inkscape.org/) but primarily through codegen -->
+
+<svg
+   width="158.75mm"
+   height="218.28127mm"
+   viewBox="0 0 158.75 218.28127"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.3.1 (91b66b0783, 2023-11-16)"
+   sodipodi:docname="means front template.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     inkscape:zoom="0.49829275"
+     inkscape:cx="60.205571"
+     inkscape:cy="601.05229"
+     inkscape:window-width="1876"
+     inkscape:window-height="1032"
+     inkscape:window-x="44"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="g8" />
+  <defs
+     id="defs1">
+    <rect
+       x="40.66116"
+       y="678.98822"
+       width="512.60158"
+       height="111.65349"
+       id="rect10" />
+    <rect
+       x="442.54103"
+       y="764.68524"
+       width="32.549689"
+       height="18.533424"
+       id="rect9" />
+  </defs>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="g8"
+     transform="translate(0,0)">
+    <polygon
+       fill="#929497"
+       points="144,198 144,0 0,0 0,198 "
+       id="assetback"
+       transform="matrix(1.1024306,0,0,1.1024306,0,2e-4)"
+       style="fill:#{background_color};fill-opacity:1;stroke-width:0.24" />
+    <path
+       fill="#ffffff"
+       stroke="#ec1e28"
+       stroke-width="0.374174"
+       d="M 138.9062,208.35959 H 19.8437 c -5.4799,0 -9.9221,-4.4417 -9.9221,-9.9219 V 19.844 c 0,-5.4802 4.4422,-9.9219 9.9221,-9.9219 h 119.0625 c 5.48,0 9.9218,4.4417 9.9218,9.9219 v 178.59369 c 0,5.4802 -4.4418,9.9219 -9.9218,9.9219 z"
+       id="cutline"
+       style="fill:#{background_color};fill-opacity:1;stroke:none" />
+    <g
+       transform="translate(84.75197610056054,103.4528234964666) scale(0.5)"
+       id="g1">
+      <g
+         inkscape:label="Layer 1"
+         inkscape:groupmode="layer"
+         id="layer1"
+         transform="translate(-1066.7783,-589.34825)" />
+    </g>
+    <g transform="rotate({rotation},79.375003,109.14083)">
+    {inserting}
+    </g>
+    <text
+       xml:space="preserve"
+       transform="matrix(0.26458333,0,0,0.26458333,0.55598493,-3.6076306)"
+       id="text10"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:53.3333px;line-height:1.05;font-family:Rubik;-inkscape-font-specification:Rubik;text-align:center;white-space:pre;shape-inside:url(#rect10);display:inline;fill:#757575;fill-opacity:1;stroke:none;stroke-width:7.55906;stroke-linecap:round;stroke-linejoin:round"><tspan
+         x="84.767989"
+         y="722.40316"
+         id="tspan3">{name}</tspan></text>
+  </g>
+</svg>"##).unwrap();
+}
+
+pub fn flip_rings(
+    to_color: &str,
+    from_color: &str,
+    element_graphic: &Displaying<impl Fn(&mut dyn Write)>,
+    center: V2,
+    scale: f64,
+    to: &mut dyn Write,
+) {
+    let offset = center - both_dims(FLIP_RINGS_RAD) * scale;
+    write!(to, r##"
+        <g
+        inkscape:label="Layer 1"
+        inkscape:groupmode="layer"
+        id="layer1"
+        transform="translate({},{}) scale({})">
+        <circle
+        style="fill:#{to_color};stroke-width:2;stroke-linecap:round;stroke-linejoin:round"
+        id="path1"
+        cx="57.828403"
+        cy="57.828403"
+        r="57.828403" />
+        {element_graphic}
+        <path
+        id="circle1"
+        style="fill:#{from_color};stroke-width:2;stroke-linecap:round;stroke-linejoin:round;fill-opacity:1"
+        d="m 0,57.828512 c -5.7990107e-5,31.937829 25.890683,57.828568 57.828512,57.828508 31.937827,6e-5 57.828568,-25.890681 57.828508,-57.828508 H 102.70071 C 102.70061,82.610703 82.610703,102.70061 57.828512,102.70071 33.04612,102.7009 12.955894,82.610904 12.955798,57.828512 Z"
+        sodipodi:nodetypes="ccccccc" />
+    </g>"##, offset.x, offset.y, scale).unwrap();
+}
+
+
+pub const FLIP_RINGS_SPAN: f64 = 115.65681;
+pub const FLIP_RINGS_RAD: f64 = FLIP_RINGS_SPAN/2.0;
+
+pub fn flipping_to(assets:&SvgAssets, e:ElementTag, center:V2, scale:f64, w:&mut dyn Write){
+    let eo = opposite_element(e);
+    let to_color = element_colors_back[e];
+    let from_color = element_colors_back[eo];
+    let element_graphic = {
+        Displaying(|w| {
+            assets.element(e).by_grav(
+                both_dims(FLIP_RINGS_RAD),
+                MIDDLE_MIDDLE,
+                1.0,
+                w,
+            )
+        })
+    };
+    flip_rings(to_color, from_color, &element_graphic, center, scale, w);
+}
+
+pub fn dual_color_patch(assets: &SvgAssets, e1: ElementTag, e2: ElementTag, bounds:Rect, w: &mut dyn Write) {
+    let color_left = element_colors_back[e1];
+    let color_right = element_colors_back[e2];
+    let sd = bounds.span().min();
+    let splat_span = V2::new(205.18423, 224.67136);
+    let scale = bounds.span().component_div(&splat_span).min()*0.78;
+    let offset = bounds.center() - scale*splat_span/2.0;
+    let (c1, c2) = tilted_pair(splat_span/2.0, splat_span.x*0.17);
+    let e1d = Displaying(|w| assets.element(e1).by_grav(c1, MIDDLE_MIDDLE, 0.6, w));
+    let e2d = Displaying(|w| assets.element(e2).by_grav(c2, MIDDLE_MIDDLE, 0.6, w));
+    
+    write!(
+        w,
+        r##"<g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate({},{}) scale({})">
+    <path
+       id="path27"
+       style="color:#000000;fill:#{color_right};fill-opacity:1;stroke-linecap:round;stroke-linejoin:round;-inkscape-stroke:none"
+       d="m 163.76833,188.61458 a 40.004,40.004 0 0 0 29.42353,-68.539 c -2.09677,-2.0548 -3.25951,-4.8237 -3.27163,-7.7582 0.0101,-2.9307 1.16703,-5.6958 3.25768,-7.7514 a 40.004,40.004 0 0 0 -38.89272,-67.0218 c -2.75377,0.7759 -5.6431,0.4131 -8.15196,-0.9472 -2.45564,-1.4827 -4.23739,-3.8089 -4.95525,-6.5939 a 40.004,40.004 0 0 0 -77.50793,0.1581 c -0.68976,2.7219 -2.414,4.9918 -4.77439,6.4895 l 87.38692,151.3588 c 2.4791,-1.2988 5.31406,-1.643 8.01863,-0.8775 a 40.004,40.004 0 0 0 9.46712,1.4826 z" />
+    <path
+       id="path28"
+       style="color:#000000;fill:#{color_left};fill-opacity:1;stroke-linecap:round;stroke-linejoin:round;-inkscape-stroke:none"
+       d="m 102.36175,224.67128 a 40.004,40.004 0 0 0 38.81623,-30.0023 c 0.71838,-2.7867 2.50075,-5.115 4.95887,-6.5975 0.047,-0.025 0.0985,-0.037 0.14573,-0.062 L 58.89566,36.65068 c -4.1e-4,3e-4 -6.2e-4,8e-4 -10e-4,0 -2.47863,1.2958 -5.30812,1.654 -8.0114,0.8888 a 40.004,40.004 0 0 0 -38.89065,67.0564 c 2.09243,2.0505 3.25056,4.8103 3.26751,7.738 -0.017,2.9276 -1.1751,5.6901 -3.26751,7.7406 a 40.004,40.004 0 0 0 38.89065,67.0543 c 2.70333,-0.7652 5.53275,-0.405 8.0114,0.8909 2.36079,1.4977 4.08557,3.7663 4.77542,6.4885 a 40.004,40.004 0 0 0 38.6917,30.162 z" />
+    {e1d}
+    {e2d}
+  </g>"##, offset.x, offset.y, scale,
+    ).unwrap();
+}
+
+pub fn come_on_down(assets:&SvgAssets, e:ElementTag, bounds:Rect, to:&mut dyn Write) {
+    let ea = assets.element(e);
+    come_on_down_specifically(assets, ea, ea, e, bounds, to);
+}
+pub fn come_on_down_specifically(assets:&SvgAssets, left_asset:&Asset, right_asset:&Asset, ef:ElementTag, bounds:Rect, to:&mut dyn Write) {
+    let ec = element_colors_back[ef];
+    let er = bounds.span().x*0.19;
+    let escale = er/BIG_ELEMENT_RAD;
+    let sepx = er*1.26;
+    let sepy = er*0.8;
+    let hsep = sepx*2.0;
+    let cc = bounds.center() + V2::new(0.0, er*0.3);
+    let c1off = V2::new(-sepx, -sepy);
+    let c1 = cc + c1off;
+    let c2 = cc - c1off;
+    let codspan = 67.3;
+    let codscale = hsep/codspan;
+    let codanchor = V2::new(9.29, 41.64)*codscale;
+    let codoffset = V2::new(c1.x - codanchor.x, c1.y - er*0.6 - codanchor.y);
+    write!(to, r##"<g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate({},{}) scale({codscale})">
+    <path
+       id="path50"
+       style="color:#000000;fill:#{ec};stroke-linecap:round;stroke-linejoin:round;-inkscape-stroke:none"
+       d="M 38.159945 0.0098185221 C 37.498511 0.023905038 36.837434 0.052318903 36.177637 0.0956014 C 28.260067 0.61499139 20.508659 3.2482202 14.083895 8.3576294 C 5.517543 15.170175 -1.2533172e-15 26.47775 0 40.095744 A 9.4499998 9.4499998 0 0 0 9.4490356 49.546847 A 9.4499998 9.4499998 0 0 0 18.900138 40.095744 C 18.900138 31.181933 21.795547 26.370862 25.847518 23.148458 C 29.89949 19.926055 35.796642 18.384631 42.089937 19.060335 C 54.676529 20.411744 67.298735 29.295611 67.298735 48.312297 A 9.4499998 9.4499998 0 0 0 67.402087 49.098295 L 55.604875 49.098295 L 76.933289 65.405827 L 98.261702 49.098295 L 86.158565 49.098295 A 9.4499998 9.4499998 0 0 0 86.197323 48.312297 C 86.197323 20.283577 65.169656 2.5291176 44.107385 0.26768392 C 42.132797 0.055674506 40.144244 -0.032441026 38.159945 0.0098185221 z " />
+  </g>"##, codoffset.x, codoffset.y).unwrap();
+    left_asset.centered(c1, escale, to);
+    right_asset.centered(c2, escale, to);
+}
+
+pub fn overplace(blank_circle:&Asset, placing:&Asset, over:&Asset, bounds:Rect, to:&mut dyn Write){
+    let pr = placing.bounds.x/2.0;
+    let tr = over.bounds.x/2.0;
+    let sep = pr*1.5;
+    let br = pr*1.2;
+    let tsp = pr + sep + tr;
+    let tsph = tsp/2.0;
+    let scale = bounds.span().y*0.8/tsp;
+    let center = bounds.center();
+    let pc = V2::new(0.0, -tsph + pr);
+    let bc = pc;
+    let tc = V2::new(0.0, -tsph + pr + sep);
+    let placingd = &Displaying(|w| placing.centered(pc, 1.0, w));
+    let overd = &Displaying(|w| over.centered(tc, 1.0, w));
+    let blankd = &Displaying(|w| blank_circle.centered(bc, 1.2, w));
+    write!(to, r##"<g transform="translate({},{}) scale({scale})">{overd}{blankd}{placingd}</g>
+    "##, center.x, center.y).unwrap();
+}
+
+pub fn generate_assets(assets: &Rc<SvgAssets>)-> Rc<GeneratedAssets> {
+    fn flip_asset_for(assets: &Rc<SvgAssets>, e: ElementTag) -> Asset {
+        let b = both_dims(FLIP_RINGS_SPAN);
+        Asset {
+            bounds: b,
+            render: Rc::new({
+                let assets = assets.clone();
+                move |p, s, w| {
+                    flip_rings(
+                        element_colors_back[e],
+                        element_colors_back[opposite_element(e)],
+                        &Displaying(|w| {
+                            assets.element(e).by_ul(
+                                both_dims(FLIP_RINGS_RAD - BIG_ELEMENT_RAD),
+                                1.0,
+                                w,
+                            )
+                        }),
+                        // p + both_dims(FLIP_RINGS_RAD),
+                        p + both_dims(FLIP_RINGS_RAD)*s,
+                        s,
+                        w,
+                    )
+                }
+            }),
+        }
+    }
+    Rc::new(GeneratedAssets {
+        flip_field: flip_asset_for(&assets, FIELD_I),
+        flip_forest: flip_asset_for(&assets, FOREST_I),
+        flip_mountain: flip_asset_for(&assets, MOUNTAIN_I),
+        flip_volcano: flip_asset_for(&assets, VOLCANO_I),
+        flip_lake: flip_asset_for(&assets, LAKE_I),
+        flip_ice: flip_asset_for(&assets, ICE_I),
+        flip_tomb: flip_asset_for(&assets, TOMB_I),
+        flip_void: flip_asset_for(&assets, VOID_I),
+    })
+}

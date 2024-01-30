@@ -1,8 +1,14 @@
-use std::{fmt::Display, fs::File, io::Write, path::Path, rc::Rc};
+use std::{
+    collections::HashSet,
+    fs::{self, create_dir, read_dir, remove_file, File},
+    io::Write,
+    path::Path,
+    rc::Rc,
+};
 
+//core logic is in main, extended logic in generation, piles of uninteresting stuff in boring
 mod boring;
-use boring::*;
-
+pub use boring::*;
 mod generation;
 
 // #[derive(Serialize)]
@@ -19,62 +25,56 @@ mod generation;
 pub fn elements() -> impl Iterator<Item = ElementTag> {
     0..8
 }
-
-pub struct EndCardSpec {
-    // likes: Vec<ElementTag>,
-    name: String,
-    generate_front: Rc<dyn Fn(&mut dyn Write)>,
-    generate_back: Rc<dyn Fn(&mut dyn Write)>,
+pub fn element_primaries() -> impl Iterator<Item = (ElementTag, ElementTag)> {
+    (0..4).map(|i| (i * 2, i * 2 + 1))
 }
-impl EndCardSpec {
-    fn with_back_blured_message(
-        name: String,
-        front_graphic: Rc<dyn Display>,
-        score: usize,
-        back_text: String
-    ) -> Self {
-        let rcd = Rc::new(front_graphic);
-        Self {
-            name,
-            generate_front: {let front_inner = rcd.clone(); Rc::new(move |w| {
-                end_front_outer(&Displaying(|w|end_front_inner(&front_inner, score, w)), w);
-            })},
-            generate_back: Rc::new({let front_inner = rcd.clone(); move |w| {
-                //you have to clone, because this lambda could be called multiple times, meaning it has to retain something to clone from to create the lambda ahead
-                end_backing(&front_inner, w, &back_text);
-            }}),
-        }
-    }
+
+fn cards_to_remove() -> HashSet<&'static str> {
+    HashSet::from([])
 }
 
 fn main() {
-    {
-        //clear dir if present
-        if let Ok(dens) = std::fs::read_dir("generated_card_svgs") {
-            for item_m in dens {
-                if let Ok(item) = item_m {
-                    std::fs::remove_file(item.path()).unwrap();
-                }
+    let output_dir = Path::new("generated_card_svgs");
+    //clear dir if present
+    if let Ok(dens) = read_dir(&output_dir) {
+        for item_m in dens {
+            if let Ok(item) = item_m {
+                remove_file(item.path()).unwrap();
             }
-        } else {
-            //create otherwise
-            drop(std::fs::create_dir("generated_card_svgs"));
         }
-        std::env::set_current_dir("generated_card_svgs/").unwrap();
-
-        let mut specs = Vec::new();
-
-        generation::generate_specs(&mut specs);
-
-        for spec in specs.iter() {
-            (spec.generate_front)(
-                &mut File::create(Path::new(&format!("{}[front].svg", &spec.name))).unwrap(),
-            );
-            (spec.generate_back)(
-                &mut File::create(Path::new(&format!("{}[back].svg", &spec.name))).unwrap(),
-            );
-        }
-
-        std::env::set_current_dir("../").unwrap();
+    } else {
+        //create otherwise
+        drop(create_dir(&output_dir));
     }
+
+    let assets = Rc::new(SvgAssets::load(Path::new("assets")));
+    let all_assets = Rc::new(AllAssets {
+        generated: generate_assets(&assets),
+        svg: assets,
+    });
+
+    let ends_specs = generation::end_specs(&all_assets);
+    let means_specs = generation::means_specs(&all_assets);
+
+    for spec in ends_specs.iter().chain(means_specs.iter()).chain(generation::land_specs(&all_assets).iter()) {
+        (spec.generate_front)(
+            &mut File::create(output_dir.join(&format!("{}[front].svg", &spec.name))).unwrap(),
+        );
+        (spec.generate_back)(
+            &mut File::create(output_dir.join(&format!("{}[back].svg", &spec.name))).unwrap(),
+        );
+    }
+
+    // let to_remove = cards_to_remove();
+
+    // drop(create_dir("final cards"));
+
+    // if let Ok(ecsf) = read_dir("handmade cards") {
+    //     for c in ecsf {
+    //         if let Ok(cc) = c {
+    //             if to_remove.contains(cc.file_name().to_str().unwrap()) { continue; }
+    //             fs::copy(cc.path(), Path::new("final cards").join(cc.file_name())).unwrap();
+    //         }
+    //     }
+    // }
 }

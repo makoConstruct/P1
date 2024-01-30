@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="98.261818mm"
+   height="65.40593mm"
+   viewBox="0 0 98.261818 65.40593"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.3.1 (91b66b0783, 2023-11-16)"
+   sodipodi:docname="come_on_down.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     inkscape:zoom="1.1113219"
+     inkscape:cx="157.47012"
+     inkscape:cy="-0.44991463"
+     inkscape:window-width="1876"
+     inkscape:window-height="1032"
+     inkscape:window-x="44"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs1" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <path
+       id="path50"
+       style="color:#000000;fill:#efcfcf;stroke-linecap:round;stroke-linejoin:round;-inkscape-stroke:none"
+       d="M 38.159945 0.0098185221 C 37.498511 0.023905038 36.837434 0.052318903 36.177637 0.0956014 C 28.260067 0.61499139 20.508659 3.2482202 14.083895 8.3576294 C 5.517543 15.170175 -1.2533172e-15 26.47775 0 40.095744 A 9.4499998 9.4499998 0 0 0 9.4490356 49.546847 A 9.4499998 9.4499998 0 0 0 18.900138 40.095744 C 18.900138 31.181933 21.795547 26.370862 25.847518 23.148458 C 29.89949 19.926055 35.796642 18.384631 42.089937 19.060335 C 54.676529 20.411744 67.298735 29.295611 67.298735 48.312297 A 9.4499998 9.4499998 0 0 0 67.402087 49.098295 L 55.604875 49.098295 L 76.933289 65.405827 L 98.261702 49.098295 L 86.158565 49.098295 A 9.4499998 9.4499998 0 0 0 86.197323 48.312297 C 86.197323 20.283577 65.169656 2.5291176 44.107385 0.26768392 C 42.132797 0.055674506 40.144244 -0.032441026 38.159945 0.0098185221 z " />
+  </g>
+</svg>
