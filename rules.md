@@ -24,9 +24,13 @@ For 3 players, players should each have 2 desire cards, 3 abilities on the large
 
 For 4 and upwards, 2 desires, 2 on the larger and 1 on the smaller.
 
-The lead player moves first. Each of their pieces can move and activate just one of their abilities, in any order. Turns should be limited to [todo] 1 minute (negotiation tends to want to fill as much time as it can, so we can't let it).
+The lead player moves first. Each of their pieces can move and activate just one of their abilities, in any order. Turns should be limited to [todo] 1 minute (everything that's interesting about negotiation is about the way it strains under time constraints).
 
-After the 12th round, everyone makes a note of their scores. If the average of your past 5 games were above [todo] 16, you have transcended, you are a being of peace, and you may begin to play level 2 games with other transcended players.
+After the 12th round, the game ends, scores are measured.
+
+- Keep a note of your score. If the average of your past 5 games were above [todo: measure, tweak] 16, you have transcended, you are a being of peace, and you may begin to play level 2 games with other transcended players.
+
+- To make things easier at first, you may wish to keep your characters' means cards together for the next game you play. Instead of rerolling an entirely new character, you may prefer to alter one or two of your means or ends. It's much easier to orient yourself in a new situation if it's a variation on one we've seen before.
 
 ### Level 2
 

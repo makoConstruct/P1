@@ -1,21 +1,39 @@
 //performance refactor that could be done: take mut Writers instead of outputting Strings
 
 use elementtree::WriteOptions;
+use mako_infinite_shuffle::{Cross, Indexing, OpsRef};
 use nalgebra::{Rotation2, Vector2};
 use std::{
-    f64::consts::TAU, fmt::Display, io::Write, mem::swap, path::{Path, PathBuf}, process::Command, rc::Rc
+    f64::consts::TAU,
+    fmt::Display,
+    io::Write,
+    path::{Path, PathBuf},
+    process::Command,
+    rc::Rc,
 };
 
 pub fn from_angle_mag(angle: f64, mag: f64) -> V2 {
     V2::new(angle.cos() * mag, angle.sin() * mag)
 }
-pub fn both_dims(v:f64)-> V2 { V2::new(v,v) }
+pub fn from_angle(angle: f64) -> V2 {
+    from_angle_mag(angle, 1.0)
+}
+//rotation should be unit. If it isn't, the result will be scaled by the magnitude of rotation.
+pub fn rotate(rotation: V2, v: V2) -> V2 {
+    V2::new(
+        rotation.x * v.x - rotation.y * v.y,
+        rotation.y * v.x + rotation.x * v.y,
+    )
+}
+pub fn both_dims(v: f64) -> V2 {
+    V2::new(v, v)
+}
 
 pub fn render_png(name: &str) {
     let mut c = Command::new("inkscape");
     c.arg("--export-type=\"png\"");
     c.arg(&format!("{}.svg", name));
-    c.output();
+    c.output().unwrap();
 }
 
 pub struct Displaying<F: Fn(&mut dyn Write)>(pub F);
@@ -52,16 +70,15 @@ pub fn opposite_element(e: ElementTag) -> ElementTag {
         _ => panic!("invalid ElementTag"),
     }
 }
-pub const element_g: [ElementGenerator; 8] = [
+pub const ELEMENT_G: [ElementGenerator; 8] = [
     field_g, forest_g, mountain_g, volcano_g, lake_g, ice_g, tomb_g, void_g,
 ];
-pub const element_names: [&'static str; 8] = [
+pub const ELEMENT_NAMES: [&'static str; 8] = [
     "field", "forest", "mountain", "volcano", "lake", "ice", "tomb", "void",
 ];
-pub const element_pair_names: [&'static str; 4] = [
-    "field/forest", "mountain/volcano", "lake/ice", "tomb/void",
-];
-pub const element_colors_back: [&'static str; 8] = [
+pub const ELEMENT_PAIR_NAMES: [&'static str; 4] =
+    ["field/forest", "mountain/volcano", "lake/ice", "tomb/void"];
+pub const ELEMENT_COLORS_BACK: [&'static str; 8] = [
     "b5efb9", "94cf9c", "eeeca7", "efcfcf", "c3edf1", "e1eff0", "ebebeb", "969696",
 ];
 pub const BOLD_COLOR_FOR_GRAPHIC: &'static str = "4b4b4b";
@@ -88,7 +105,28 @@ pub const fn element_colors_bold(i: ElementTag) -> &'static str {
 //     }
 // }
 
+pub fn elements() -> impl Indexing<Item = ElementTag> + Clone {
+    0..8
+}
+pub fn element_primaries() -> impl Indexing<Item = (ElementTag, ElementTag)> {
+    (0..4).into_map(|i| (i * 2, i * 2 + 1))
+}
+
 pub type ElementGenerator = fn(V2, f64, &mut dyn Write);
+pub fn each_nonequal_element() -> impl Indexing<Item = (ElementTag, ElementTag)> {
+    Cross(elements(), 0..7).into_map(|(a, b)| (a, if a > b { b } else { b + 1 }))
+}
+pub fn each_unordered_nonequal_pairing() -> impl Indexing<Item = (ElementTag, ElementTag)> {
+    mako_infinite_shuffle::KSubsets::new(8,2).into_map(|v| (v[0], v[1]))
+}
+pub fn each_unordered_pairing() -> impl Indexing<Item = (ElementTag, ElementTag)> {
+    mako_infinite_shuffle::KSubmultisets::new(8,2).into_map(|v| (v[0], v[1]))
+}
+pub fn each_unordered_nonequal_triple() -> impl Indexing<Item = (ElementTag, ElementTag, ElementTag)>
+{
+    mako_infinite_shuffle::KSubsets::new(8,3).into_map(|v| (v[0], v[1], v[2]))
+}
+pub type CardGen = Box<dyn Indexing<Item = CardSpec> + 'static>;
 
 pub type V2 = Vector2<f64>;
 // pub type U2 = Unit<V2>;
@@ -106,6 +144,7 @@ pub const BIG_ELEMENT_RAD: f64 = BIG_ELEMENT_SPAN / 2.0;
 pub const END_GRAPHIC_CENTER: V2 = V2::new(79.375, 138.906);
 pub const GRAPHIC_RAD: f64 = 69.4535;
 pub const CARD_DIMENSIONS: V2 = V2::new(158.75, 218.28127);
+pub const CUTLINE_INSET: V2 = V2::new(9.922, 9.922);
 pub const STANDARD_PAIR_SCALE: f64 = 0.6;
 
 type Gravity = V2;
@@ -121,13 +160,17 @@ pub const RIGHT_BOTTOM: Gravity = V2::new(1.0, 1.0);
 fn offset_for_grav(anchor: V2, grav: Gravity, bounds: V2) -> V2 {
     offset_for_grav_scale(anchor, grav, bounds, 1.0)
 }
+//I think the minus here might be wrong o_o it was wrong when transplanted to the below
 fn offset_for_grav_scale(anchor: V2, grav: Gravity, bounds: V2, scale: f64) -> V2 {
     anchor - (grav + V2::new(1.0, 1.0)).component_mul(&(scale * bounds / 2.0))
+}
+fn anchor_for_grav(grav: Gravity, bounds: V2) -> V2 {
+    (grav + V2::new(1.0, 1.0)).component_mul(&(bounds / 2.0))
 }
 
 pub fn field_g(center: V2, scale: f64, to: &mut dyn Write) {
     let offset = center - scale * BIG_ELEMENT_DIMENSIONS / 2.0;
-    let color_back = element_colors_back[FIELD_I];
+    let color_back = ELEMENT_COLORS_BACK[FIELD_I];
     let color_front = ELEMENT_COLORS_FRONT[FIELD_I];
     write!(to,
         r#"<g transform="translate({},{}) scale({})"><g
@@ -206,7 +249,7 @@ pub fn field_g(center: V2, scale: f64, to: &mut dyn Write) {
 }
 pub fn forest_g(center: V2, scale: f64, to: &mut dyn Write) {
     let offset = center - scale * BIG_ELEMENT_DIMENSIONS / 2.0;
-    let color_back = element_colors_back[FOREST_I];
+    let color_back = ELEMENT_COLORS_BACK[FOREST_I];
     let color_front = ELEMENT_COLORS_FRONT[FOREST_I];
     write!(to,
         r#"<g transform="translate({},{}) scale({})"><g
@@ -485,55 +528,90 @@ r##"<g
        d="M 0 0.0002 L 0 69.453325 L 67.879061 69.453325 C 69.026866 69.453069 70.1277 68.996781 70.939339 68.185185 L 74.891036 64.229354 L 77.758561 61.357695 C 78.212915 60.949318 78.702724 60.766517 79.375 60.766517 C 80.047275 60.766517 80.537086 60.949318 80.991439 61.357695 L 83.858964 64.229354 L 87.810661 68.185185 C 88.6223 68.996781 89.723134 69.453069 90.870939 69.453325 L 158.75 69.453325 L 158.75 0.0002 L 0 0.0002 z " />
     <text
        xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:500;font-stretch:normal;font-size:49.3895px;line-height:1.25;font-family:Rubik;-inkscape-font-specification:'Rubik Medium';letter-spacing:0px;word-spacing:0px;fill:#eeeeee;fill-opacity:1;stroke:none;stroke-width:1.23474"
-       x="63.172646"
+       style="font-style:normal;font-variant:normal;font-weight:500;font-stretch:normal;font-size:49.3895px;line-height:1.25;font-family:Rubik;-inkscape-font-specification:'Rubik Medium';letter-spacing:0px;word-spacing:0px;fill:#eeeeee;fill-opacity:1;stroke:none;stroke-width:1.23474;text-anchor:middle;text-align:center"
+       x="79"
        y="53.854977"
        id="pointscore"><tspan
          sodipodi:role="line"
          id="tspan4"
          x="63.172646"
          y="53.854977"
-         style="font-style:normal;font-variant:normal;font-weight:500;font-stretch:normal;font-family:Rubik;-inkscape-font-specification:'Rubik Medium';fill:#eeeeee;fill-opacity:1;stroke-width:1.23474">{scores}</tspan></text>
+         style="font-style:normal;font-variant:normal;font-weight:500;font-stretch:normal;font-family:Rubik;-inkscape-font-specification:'Rubik Medium';fill:#eeeeee;fill-opacity:1;stroke-width:1.23474;text-anchor:middle;text-align:center">{scores}</tspan></text>
     {inserting}
   </g>"##,
     ).unwrap();
 }
+
+#[derive(Clone)]
 pub struct CardSpec {
     // likes: Vec<ElementTag>,
     pub name: String,
+    pub repeat: usize,
     pub generate_front: Rc<dyn Fn(&mut dyn Write)>,
     pub generate_back: Rc<dyn Fn(&mut dyn Write)>,
 }
 impl CardSpec {
-    pub fn means_card_with_back_blurred_message(
+    pub fn means_card(
+        assets: &Rc<Assets>,
         name: String,
         filename: Option<String>,
+        // the level of play on which this card should become available
+        level: usize,
         front_graphic: Rc<dyn Fn(&mut dyn Write)>,
         back_text: String,
     ) -> Self {
-        let filename = if let Some(n) = filename { n } else { name.clone() };
+        Self::means_card_repeated(assets, name, filename, 1, level, front_graphic, back_text)
+    }
+    pub fn means_card_repeated(
+        assets: &Rc<Assets>,
+        name: String,
+        filename: Option<String>,
+        repeated: usize,
+        // the level of play on which this card should become available
+        level: usize,
+        front_graphic: Rc<dyn Fn(&mut dyn Write)>,
+        back_text: String,
+    ) -> Self {
+        let filename = if let Some(n) = filename {
+            n
+        } else {
+            name.clone()
+        };
         Self {
             name: filename,
+            repeat: repeated,
             generate_front: {
                 let front_graphic = front_graphic.clone();
                 let name = name.clone();
                 Rc::new(move |w| means_front(&Displaying(|w| front_graphic(w)), &name, w))
             },
-            generate_back: Rc::new(move |w| {
-                backing(&Displaying(|w| front_graphic(w)), w, &back_text)
+            generate_back: Rc::new({
+                let assets = assets.clone();
+                move |w| {
+                    backing(
+                        &assets,
+                        &Displaying(|w| front_graphic(w)),
+                        w,
+                        &back_text,
+                        level,
+                    );
+                }
             }),
         }
     }
     pub fn end_card_with_back_blurred_message(
+        assets: &Rc<Assets>,
         name: String,
         front_graphic: Rc<dyn Display>,
         score: String,
         back_text: String,
+        level: usize,
     ) -> Self {
         let rcd = Rc::new(front_graphic);
         let sc = score.clone();
         Self {
             name,
+            repeat: 1,
             generate_front: {
                 let front_inner = rcd.clone();
                 Rc::new(move |w| {
@@ -545,10 +623,11 @@ impl CardSpec {
                 })
             },
             generate_back: Rc::new({
+                let assets = assets.clone();
                 let front_inner = rcd.clone();
                 move |w| {
                     //you have to clone, because this lambda could be called multiple times, meaning it has to retain something to clone from to create the lambda ahead
-                    end_backing(&front_inner, w, &back_text);
+                    end_backing(&assets, &front_inner, w, &back_text, level);
                 }
             }),
         }
@@ -614,11 +693,33 @@ pub fn front_outer(inserting: &impl Display, to: &mut dyn Write) {
     .unwrap();
 }
 
-pub fn end_backing(inserting: &impl Display, to: &mut dyn Write, description: &str) {
-    backing(inserting, to, description);
+pub fn end_backing(
+    assets: &Rc<Assets>,
+    inserting: &impl Display,
+    to: &mut dyn Write,
+    description: &str,
+    level: usize,
+) {
+    backing(assets, inserting, to, description, level);
 }
-pub fn backing(inserting: &impl Display, to: &mut dyn Write, description: &str) {
+pub fn backing(
+    assets: &Rc<Assets>,
+    inserting: &impl Display,
+    to: &mut dyn Write,
+    description: &str,
+    level: usize,
+) {
     let span = CARD_DIMENSIONS.x;
+    let level_marker = Displaying(|w| {
+        if level >= 2 {
+            assets.level_2.by_grav(
+                cutline_bounds_shrunk_appropriately().br,
+                RIGHT_BOTTOM,
+                1.0,
+                w,
+            );
+        }
+    });
     write!(to,
 r##"<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!-- Created partially with Inkscape (http://www.inkscape.org/) but primarily through codegen -->
@@ -687,19 +788,20 @@ r##"<?xml version="1.0" encoding="UTF-8" standalone="no"?>
        id="assetback"
        transform="matrix(1.1024306,0,0,1.1024306,0,2e-4)"
        style="fill:#f1f2f2;fill-opacity:1;stroke-width:0.24" />
-    <g transform="matrix(-1,0,0,1,{span},0)" style="opacity:0.48;filter:url(#flipfilter)">
+    <g transform="matrix(-1,0,0,1,{span},0)" style="opacity:0.27;filter:url(#flipfilter)">
     {inserting}
     </g>
     <text
        xml:space="preserve"
        transform="matrix(0.26458333,0,0,0.26458333,-0.21640517,0)"
        id="text1"
-       style="font-weight:900;font-size:46px;font-family:'Inter UI';-inkscape-font-specification:'Rubik';text-align:center;vertical-align:bottom;white-space:pre;shape-inside:url(#descriptionrect);opacity:1;fill:#3e3e3e;fill-opacity:1;stroke:none;stroke-width:7.55906;stroke-linecap:round;stroke-linejoin:round"><tspan
+       style="font-weight:900;font-size:37px;font-family:'Inter UI';-inkscape-font-specification:'Rubik';text-align:center;vertical-align:bottom;white-space:pre;shape-inside:url(#descriptionrect);opacity:1;fill:#3e3e3e;fill-opacity:1;stroke:none;stroke-width:7.55906;stroke-linecap:round;stroke-linejoin:round"><tspan
          x="93.067162"
          y="126.73272"
          id="tspan3"><tspan
            style="font-weight:normal;font-family:Rubik;-inkscape-font-specification:Rubik"
            id="tspan2">{description}</tspan></tspan></text>
+    {level_marker}
   </g>
 </svg>
 "##,
@@ -798,14 +900,15 @@ pub fn paired(e1: ElementTag, e2: ElementTag, flipped: bool, to: &mut dyn Write)
     if flipped {
         std::mem::swap(&mut c1.y, &mut c2.y);
     }
-    element_g[e1](c1, sized, to);
-    element_g[e2](c2, sized, to);
+    ELEMENT_G[e1](c1, sized, to);
+    ELEMENT_G[e2](c2, sized, to);
 }
 
+//generalizable util stuff
 #[derive(Clone)]
 pub struct Rect {
-    ul: V2,
-    br: V2,
+    pub ul: V2,
+    pub br: V2,
 }
 impl Rect {
     pub fn from_center_radii(center: V2, radii: V2) -> Self {
@@ -834,13 +937,158 @@ impl Rect {
         }
     }
     ///specifically it's reduced by a proportion of the smallest dimension
-    pub fn shrunk(&self, to_proportion:f64)-> Rect {
-        self.reduced_by(self.span().min()*(1.0 - to_proportion)/2.0)
+    pub fn shrunk(&self, to_proportion: f64) -> Rect {
+        self.reduced_by(self.span().min() * (1.0 - to_proportion) / 2.0)
     }
 }
 
+pub fn cross<A: Clone, B>(
+    a: impl Iterator<Item = A>,
+    b: impl Iterator<Item = B> + Clone,
+) -> impl Iterator<Item = (A, B)> {
+    a.flat_map(move |ai| {
+        b.clone().map({
+            let ai = ai.clone();
+            move |bs| (ai.clone(), bs)
+        })
+    })
+}
+
+#[derive(Copy, Clone)]
+pub struct Coord {
+    pub x: i32,
+    pub y: i32,
+}
+impl Coord {
+    pub const DWARD: Coord = Coord { x: 1, y: 0 };
+    pub const EWARD: Coord = Coord { x: 0, y: 1 };
+    pub const WWARD: Coord = Coord { x: -1, y: 1 };
+    pub const AWARD: Coord = Coord { x: -1, y: 0 };
+    pub const ZWARD: Coord = Coord { x: 0, y: -1 };
+    pub const XWARD: Coord = Coord { x: 1, y: -1 };
+    pub fn new(x: i32, y: i32) -> Self {
+        Coord { x, y }
+    }
+    pub fn to_v2(self) -> V2 {
+        V2::new(self.x as f64, self.y as f64)
+    }
+}
+
+pub struct HexSpiral {
+    pub layer: u32,
+    pub leg: u32,
+    pub progress: u32,
+    pub x: i32,
+    pub y: i32,
+}
+
+impl HexSpiral {
+    pub fn new() -> HexSpiral {
+        HexSpiral {
+            layer: 0,
+            leg: 1,
+            progress: 0,
+            x: 0,
+            y: 0,
+        }
+    }
+    pub fn step(&mut self) {
+        if self.layer == 0 {
+            self.y += 1;
+            self.layer = 1;
+        } else {
+            match self.leg {
+                0 => {
+                    self.y += 1;
+                    self.x -= 1;
+                }
+                1 => {
+                    self.x -= 1;
+                }
+                2 => {
+                    self.y -= 1;
+                }
+                3 => {
+                    self.x += 1;
+                    self.y -= 1;
+                }
+                4 => {
+                    self.x += 1;
+                }
+                _ => {
+                    self.y += 1;
+                }
+            }
+            self.progress += 1;
+            if self.leg >= 5 {
+                if self.progress > self.layer {
+                    self.layer += 1;
+                    self.leg = 0;
+                    self.progress = 1;
+                }
+            } else {
+                if self.progress == self.layer {
+                    self.leg += 1;
+                    self.progress = 0;
+                }
+            }
+        }
+    }
+
+    pub fn current_hex_coord(&self) -> Coord {
+        Coord::new(self.x, self.y)
+    }
+    pub fn layer_iter(self, layers: usize) -> HexLayerIter {
+        HexLayerIter(self, layers)
+    }
+}
+pub struct HexLayerIter(HexSpiral, usize);
+impl Iterator for HexLayerIter {
+    type Item = Coord;
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.0.layer as usize > self.1 {
+            None
+        } else {
+            self.0.next()
+        }
+    }
+}
+
+impl Iterator for HexSpiral {
+    type Item = Coord;
+    fn next(&mut self) -> Option<Self::Item> {
+        let r = Some(self.current_hex_coord());
+        self.step();
+        r
+    }
+}
+
+pub fn hexify(v: V2) -> V2 {
+    V2::new(v.x + v.y / 2.0, v.y * (3.0 / 4.0 as f64).sqrt())
+} //from square to hex
+pub fn unhexify(v: V2) -> V2 {
+    V2::new(
+        v.x - v.y / (3.0 as f64).sqrt(),
+        v.y / (3.0 / 4.0 as f64).sqrt(),
+    )
+} //from hex to square
+
+//end generalizable util stuff
+
 pub fn end_graphic_usual_bounds() -> Rect {
     Rect::from_center_radii(END_GRAPHIC_CENTER, V2::from_element(GRAPHIC_RAD))
+}
+pub fn end_graphic_usual_bounds_shrunk_appropriately() -> Rect {
+    end_graphic_usual_bounds().shrunk(0.8)
+}
+pub fn cutline_bounds_shrunk_appropriately() -> Rect {
+    cutline_bounds().shrunk(0.83)
+}
+pub fn cutline_bounds() -> Rect {
+    Rect {
+        ul: CUTLINE_INSET,
+        br: CARD_DIMENSIONS - CUTLINE_INSET,
+    }
 }
 pub fn means_graphic_usual_bounds() -> Rect {
     let ul = V2::new(9.922, 9.922);
@@ -848,6 +1096,9 @@ pub fn means_graphic_usual_bounds() -> Rect {
         ul,
         br: ul + V2::new(138.906, 162.991),
     }
+}
+pub fn means_graphic_usual_bounds_shrunk_appropriately() -> Rect {
+    means_graphic_usual_bounds().shrunk(0.8)
 }
 pub fn card_upper_center() -> V2 {
     V2::new(CARD_DIMENSIONS.x / 2.0, CARD_DIMENSIONS.x / 2.0)
@@ -900,7 +1151,7 @@ pub fn assume_writes_utf8(f: impl Fn(&mut dyn Write)) -> String {
 
 #[derive(Clone)]
 pub struct Asset {
-    pub render: Rc<dyn Fn(V2, f64, &mut dyn Write)>,
+    pub render: Rc<dyn Fn(V2, f64, f64, &mut dyn Write)>,
     pub bounds: V2,
 }
 impl Asset {
@@ -908,13 +1159,40 @@ impl Asset {
         let scale = (bounds.width() / self.bounds.x).min(bounds.height() / self.bounds.y);
         self.by_grav(bounds.center(), MIDDLE_MIDDLE, scale, to);
     }
-    pub fn centered(&self, at:V2, scale:f64, to: &mut dyn Write){
+    pub fn centered(&self, at: V2, scale: f64, to: &mut dyn Write) {
         self.by_grav(at, MIDDLE_MIDDLE, scale, to);
+    }
+    pub fn centered_rad(&self, at: V2, rad: f64, to: &mut dyn Write) {
+        let scale = rad / (self.bounds.min() / 2.0);
+        self.by_grav(at, MIDDLE_MIDDLE, scale, to);
+    }
+    pub fn centered_rotated(&self, at: V2, scale: f64, rotation: f64, to: &mut dyn Write) {
+        self.by_grav_rotated(at, MIDDLE_MIDDLE, scale, rotation, to);
+    }
+    pub fn centered_rotr(&self, at: V2, rad: f64, rotation: f64, to: &mut dyn Write) {
+        let scale = rad / (self.bounds.min() / 2.0);
+        self.by_grav_rotated(at, MIDDLE_MIDDLE, scale, rotation, to);
     }
     pub fn by_grav(&self, anchor: V2, grav: Gravity, scale: f64, to: &mut dyn Write) {
         self.by_ul(
             offset_for_grav(anchor, grav, self.bounds * scale),
             scale,
+            to,
+        );
+    }
+    pub fn by_grav_rotated(
+        &self,
+        anchor: V2,
+        grav: Gravity,
+        scale: f64,
+        rotation: f64,
+        to: &mut dyn Write,
+    ) {
+        self.by_anchor_rotated(
+            anchor,
+            anchor_for_grav(grav, self.bounds),
+            scale,
+            rotation,
             to,
         );
     }
@@ -928,8 +1206,20 @@ impl Asset {
         let ul = anchor_screenspace - anchor_within * scale;
         self.by_ul(ul, scale, to);
     }
+    pub fn by_anchor_rotated(
+        &self,
+        anchor_screenspace: V2,
+        anchor_within: V2,
+        scale: f64,
+        rotation: f64,
+        to: &mut dyn Write,
+    ) {
+        let rotatedawi = rotate(from_angle(rotation), anchor_within);
+        let ul = anchor_screenspace - rotatedawi * scale;
+        (self.render)(ul, scale, rotation / TAU * 360.0, to);
+    }
     pub fn by_ul(&self, ul: V2, scale: f64, to: &mut dyn Write) {
-        (self.render)(ul, scale, to);
+        (self.render)(ul, scale, 0.0, to);
     }
 }
 
@@ -958,6 +1248,7 @@ pub fn load_asset(at: &Path) -> Asset {
     //scale proportionally to fit
     // let placement_bounds = end_graphic_usual_bounds().reduced_by(0.3 * GRAPHIC_RAD);
     // let scale = (placement_bounds.width() / bounds.x).min(placement_bounds.height() / bounds.y);
+    // let scale = (placement_bounds.width() / CUTLINE_INSET.x).min(placement_bounds.height() / bounds.y);
     // let offset = placement_bounds.ul + (1.0 - scale) * bounds / 2.0;
 
     // let offset = placement_bounds.ul + placement_bounds.span() / 2.0 - (bounds * scale) / 2.0;
@@ -968,87 +1259,228 @@ pub fn load_asset(at: &Path) -> Asset {
             .unwrap()
     });
     Asset {
-        render: Rc::new(move |ul: V2, scale: f64, to: &mut dyn Write| {
-            write!(
+        render: Rc::new(
+            move |ul: V2, scale: f64, rotation: f64, to: &mut dyn Write| {
+                write!(
                 to,
-                r##"<g transform="translate({},{}) scale({})">{}</g>"##,
-                ul.x, ul.y, scale, &graphic_str
+                r##"<g transform="translate({},{}) scale({scale}) rotate({rotation})">{graphic_str}</g>"##,
+                ul.x, ul.y
             )
             .unwrap();
-        }),
+            },
+        ),
         bounds,
     }
 }
 
-macro_rules ! assets {
-    ($($names:ident),*)=> {
-        pub struct SvgAssets {
-            $(pub $names: Asset),*
-        }
-        impl SvgAssets {
-            pub fn load(assets_dir:&Path)-> Self {
-                Self {
-                    $(
-                        $names: load_asset(&assets_dir.join(format!("{}.svg", stringify!($names))))
-                    ),*
-                }
+//used to use macros here but macros in rust are just so shit
+pub struct Assets {
+    pub kill: Asset,
+    pub negatory: Asset,
+    pub level_2: Asset,
+    pub guy: Asset,
+    pub guyeye: Asset,
+    pub dead_guy: Asset,
+    pub altruism: Asset,
+    pub field: Asset,
+    pub forest: Asset,
+    pub mountain: Asset,
+    pub volcano: Asset,
+    pub lake: Asset,
+    pub ice: Asset,
+    pub tomb: Asset,
+    pub void: Asset,
+    pub blank: Asset,
+    pub come_on_down: Asset,
+    pub back_colored_circle: Asset,
+    pub step: Asset,
+    pub dog_altruism: Asset,
+
+    pub field_forest: Asset,
+    pub mountain_volcano: Asset,
+    pub lake_ice: Asset,
+    pub tomb_void: Asset,
+
+    pub flip_field: Asset,
+    pub flip_forest: Asset,
+    pub flip_mountain: Asset,
+    pub flip_volcano: Asset,
+    pub flip_lake: Asset,
+    pub flip_ice: Asset,
+    pub flip_tomb: Asset,
+    pub flip_void: Asset,
+}
+
+fn flip_asset_for(to: &Asset, e: ElementTag) -> Asset {
+    let b = both_dims(FLIP_RINGS_SPAN);
+    Asset {
+        bounds: b,
+        render: Rc::new({
+            let to = to.clone();
+            move |p, s, rotation, w| {
+                flip_rings(
+                    ELEMENT_COLORS_BACK[e],
+                    ELEMENT_COLORS_BACK[opposite_element(e)],
+                    &Displaying(|w| to.by_ul(both_dims(FLIP_RINGS_RAD - BIG_ELEMENT_RAD), 1.0, w)),
+                    // p + both_dims(FLIP_RINGS_RAD),
+                    p + both_dims(FLIP_RINGS_RAD) * s,
+                    s,
+                    rotation,
+                    w,
+                )
             }
-            pub fn element(&self, e: ElementTag) -> &Asset {
-                match e {
-                    FIELD_I => &self.field,
-                    FOREST_I => &self.forest,
-                    MOUNTAIN_I => &self.mountain,
-                    VOLCANO_I => &self.volcano,
-                    LAKE_I => &self.lake,
-                    ICE_I => &self.ice,
-                    TOMB_I => &self.tomb,
-                    VOID_I => &self.void,
-                    _ => panic!("no such element as {e}"),
-                }
-            }
-            // pub fn element_both(&self, e:ElementTag)-> &Asset {
-            //     match e {
-            //         FIELD_I => &self.field_forest,
-            //         MOUNTAIN_I => &self.mountain_volcano,
-            //         LAKE_I => &self.lake_ice,
-            //         TOMB_I => &self.tomb_void,
-            //         _=> panic!("{} is an invalid tag for a pair of elements", element_names[e])
-            //     }
-            // }
-        }
+        }),
     }
 }
 
-assets!(
-    kill, guy, dead_guy, altruism, field, forest, mountain, volcano, lake, ice, tomb, void, blank, come_on_down, back_colored_circle
-);
-
-//flipping *to*
-pub struct GeneratedAssets{
-    pub flip_field:Asset,
-    pub flip_forest:Asset,
-    pub flip_mountain:Asset,
-    pub flip_volcano:Asset,
-    pub flip_lake:Asset,
-    pub flip_ice:Asset,
-    pub flip_tomb:Asset,
-    pub flip_void:Asset,
+fn generate_either(e1: &Asset, e2: &Asset) -> Asset {
+    Asset {
+        bounds: e1.bounds,
+        render: Rc::new({
+            let e1 = e1.clone();
+            let e2 = e2.clone();
+            move |p, s, rotation, w| {
+                write!(w, r##"
+<g transform="translate({},{}) scale({s}) rotate({rotation})">
+<defs id="eitherdefs">
+    <clipPath
+       clipPathUnits="userSpaceOnUse"
+       id="clipPath68">
+      <path
+         id="path69"
+         style="fill:#e4afaf;fill-opacity:1;stroke-width:9.92476;stroke-linecap:round;stroke-linejoin:round"
+         d="m 2281.1109,7898.2515 v 29.4859 h -26.337 -26.337 v -29.4859 z"
+         sodipodi:nodetypes="cccccc" />
+    </clipPath>
+    <clipPath
+       clipPathUnits="userSpaceOnUse"
+       id="clipPath67">
+      <path
+         id="path68"
+         style="fill:#e4afaf;fill-opacity:1;stroke-width:9.92476;stroke-linecap:round;stroke-linejoin:round"
+         d="m 2079.7215,7898.2515 v 29.4859 h -26.337 -26.337 v -29.4859 z"
+         sodipodi:nodetypes="cccccc" />
+    </clipPath>
+<g clip-path="url(#clipPath68)">{}</g>
+<g clip-path="url(#clipPath67)">{}</g>
+</g>"##,
+                    p.x, p.y,
+                    &Displaying(|w| e1.centered(both_dims(0.0), 1.0, w)),
+                    &Displaying(|w| e2.centered(both_dims(0.0), 1.0, w)),
+                ).unwrap();
+            }
+        }),
+    }
 }
 
-pub struct AllAssets{ pub generated:Rc<GeneratedAssets>, pub svg:Rc<SvgAssets> }
+impl Assets {
+    pub fn load(assets_dir: &Path) -> Self {
+        let kill = load_asset(&Path::new("assets/kill.svg"));
+        let negatory = load_asset(&Path::new("assets/negatory.svg"));
+        let level_2 = load_asset(&Path::new("assets/level_2.svg"));
+        let guy = load_asset(&Path::new("assets/guy.svg"));
+        let guyeye = load_asset(&Path::new("assets/guyeye.svg"));
+        let dead_guy = load_asset(&Path::new("assets/dead_guy.svg"));
+        let altruism = load_asset(&Path::new("assets/altruism.svg"));
+        let field = load_asset(&Path::new("assets/field.svg"));
+        let forest = load_asset(&Path::new("assets/forest.svg"));
+        let mountain = load_asset(&Path::new("assets/mountain.svg"));
+        let volcano = load_asset(&Path::new("assets/volcano.svg"));
+        let lake = load_asset(&Path::new("assets/lake.svg"));
+        let ice = load_asset(&Path::new("assets/ice.svg"));
+        let tomb = load_asset(&Path::new("assets/tomb.svg"));
+        let void = load_asset(&Path::new("assets/void.svg"));
+        let blank = load_asset(&Path::new("assets/blank.svg"));
+        let come_on_down = load_asset(&Path::new("assets/come_on_down.svg"));
+        let back_colored_circle = load_asset(&Path::new("assets/back_colored_circle.svg"));
+        let step = load_asset(&Path::new("assets/step.svg"));
+        let dog_altruism = load_asset(&Path::new("assets/dog_altruism.svg"));
 
-impl AllAssets {
-    pub fn flip_to(&self, e:ElementTag)-> &Asset {
+        let flip_field = flip_asset_for(&field, FIELD_I);
+        let flip_forest = flip_asset_for(&forest, FOREST_I);
+        let flip_mountain = flip_asset_for(&mountain, MOUNTAIN_I);
+        let flip_volcano = flip_asset_for(&volcano, VOLCANO_I);
+        let flip_lake = flip_asset_for(&lake, LAKE_I);
+        let flip_ice = flip_asset_for(&ice, ICE_I);
+        let flip_tomb = flip_asset_for(&tomb, TOMB_I);
+        let flip_void = flip_asset_for(&void, VOID_I);
+
+        let field_forest = generate_either(&field, &forest);
+        let mountain_volcano = generate_either(&mountain, &volcano);
+        let lake_ice = generate_either(&lake, &ice);
+        let tomb_void = generate_either(&tomb, &void);
+
+        Self {
+            kill,
+            negatory,
+            level_2,
+            guy,
+            guyeye,
+            dead_guy,
+            altruism,
+            field,
+            forest,
+            mountain,
+            volcano,
+            lake,
+            ice,
+            tomb,
+            void,
+            blank,
+            come_on_down,
+            back_colored_circle,
+            step,
+            dog_altruism,
+            flip_field,
+            flip_forest,
+            flip_mountain,
+            flip_volcano,
+            flip_lake,
+            flip_ice,
+            flip_tomb,
+            flip_void,
+            field_forest,
+            mountain_volcano,
+            lake_ice,
+            tomb_void,
+        }
+    }
+    pub fn element(&self, e: ElementTag) -> &Asset {
         match e {
-            FIELD_I => &self.generated.flip_field,
-            FOREST_I => &self.generated.flip_forest,
-            LAKE_I => &self.generated.flip_lake,
-            ICE_I => &self.generated.flip_ice,
-            TOMB_I => &self.generated.flip_tomb,
-            VOID_I => &self.generated.flip_void,
-            MOUNTAIN_I => &self.generated.flip_mountain,
-            VOLCANO_I => &self.generated.flip_volcano,
-            _=> panic!("{e} is not an element tag")
+            FIELD_I => &self.field,
+            FOREST_I => &self.forest,
+            MOUNTAIN_I => &self.mountain,
+            VOLCANO_I => &self.volcano,
+            LAKE_I => &self.lake,
+            ICE_I => &self.ice,
+            TOMB_I => &self.tomb,
+            VOID_I => &self.void,
+            _ => panic!("no such element as {e}"),
+        }
+    }
+    pub fn element_both(&self, e: ElementTag) -> &Asset {
+        match e {
+            FIELD_I => &self.field_forest,
+            MOUNTAIN_I => &self.mountain_volcano,
+            LAKE_I => &self.lake_ice,
+            TOMB_I => &self.tomb_void,
+            _ => panic!(
+                "{} is an invalid tag for a pair of elements",
+                ELEMENT_NAMES[e]
+            ),
+        }
+    }
+    pub fn flip_to(&self, e: ElementTag) -> &Asset {
+        match e {
+            FIELD_I => &self.flip_field,
+            FOREST_I => &self.flip_forest,
+            LAKE_I => &self.flip_lake,
+            ICE_I => &self.flip_ice,
+            TOMB_I => &self.flip_tomb,
+            VOID_I => &self.flip_void,
+            MOUNTAIN_I => &self.flip_mountain,
+            VOLCANO_I => &self.flip_volcano,
+            _ => panic!("{e} is not an element tag"),
         }
     }
 }
@@ -1061,8 +1493,14 @@ pub fn for_asset(at: PathBuf) -> Displaying<impl Fn(&mut dyn Write)> {
 
 //end ends stuff, begin means
 
-pub fn means_backing(inserting: &impl Display, to: &mut dyn Write, description: &str) {
-    end_backing(inserting, to, description);
+pub fn means_backing(
+    assets: &Rc<Assets>,
+    inserting: &impl Display,
+    to: &mut dyn Write,
+    description: &str,
+    level: usize,
+) {
+    backing(assets, inserting, to, description, level);
 }
 
 pub fn guylike(asset: &Asset, base_centered: V2, scale: f64, to: &mut dyn Write) {
@@ -1070,14 +1508,20 @@ pub fn guylike(asset: &Asset, base_centered: V2, scale: f64, to: &mut dyn Write)
     asset.by_anchor(base_centered, V2::new(bx, asset.bounds.y - bx), scale, to);
 }
 
-pub fn blank_front(inserting: &impl Display, color:&str, rotate:bool, to: &mut dyn Write) {
+pub fn blank_front(inserting: &impl Display, color: &str, rotate: bool, to: &mut dyn Write) {
     card_front_outer(inserting, "", color, rotate, to);
 }
 pub fn means_front(inserting: &impl Display, name: &str, to: &mut dyn Write) {
     let background_color = "f1f2f2";
     card_front_outer(inserting, name, background_color, false, to);
 }
-pub fn card_front_outer(inserting: &impl Display, name: &str, background_color:&str, rotate:bool, to: &mut dyn Write) {
+pub fn card_front_outer(
+    inserting: &impl Display,
+    name: &str,
+    background_color: &str,
+    rotate: bool,
+    to: &mut dyn Write,
+) {
     let rotation = if rotate { "90" } else { "0" };
     write!(to, r##"<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!-- Created partially with Inkscape (http://www.inkscape.org/) but primarily through codegen -->
@@ -1176,15 +1620,16 @@ pub fn flip_rings(
     element_graphic: &Displaying<impl Fn(&mut dyn Write)>,
     center: V2,
     scale: f64,
+    rotation: f64,
     to: &mut dyn Write,
 ) {
-    let offset = center - both_dims(FLIP_RINGS_RAD) * scale;
+    let offset = center - rotate(from_angle(rotation), both_dims(FLIP_RINGS_RAD)) * scale;
     write!(to, r##"
         <g
         inkscape:label="Layer 1"
         inkscape:groupmode="layer"
         id="layer1"
-        transform="translate({},{}) scale({})">
+        transform="translate({},{}) scale({}) rotate({})">
         <circle
         style="fill:#{to_color};stroke-width:2;stroke-linecap:round;stroke-linejoin:round"
         id="path1"
@@ -1197,41 +1642,50 @@ pub fn flip_rings(
         style="fill:#{from_color};stroke-width:2;stroke-linecap:round;stroke-linejoin:round;fill-opacity:1"
         d="m 0,57.828512 c -5.7990107e-5,31.937829 25.890683,57.828568 57.828512,57.828508 31.937827,6e-5 57.828568,-25.890681 57.828508,-57.828508 H 102.70071 C 102.70061,82.610703 82.610703,102.70061 57.828512,102.70071 33.04612,102.7009 12.955894,82.610904 12.955798,57.828512 Z"
         sodipodi:nodetypes="ccccccc" />
-    </g>"##, offset.x, offset.y, scale).unwrap();
+    </g>"##, offset.x, offset.y, scale, rotation/TAU*360.0).unwrap();
 }
-
 
 pub const FLIP_RINGS_SPAN: f64 = 115.65681;
-pub const FLIP_RINGS_RAD: f64 = FLIP_RINGS_SPAN/2.0;
+pub const FLIP_RINGS_RAD: f64 = FLIP_RINGS_SPAN / 2.0;
 
-pub fn flipping_to(assets:&SvgAssets, e:ElementTag, center:V2, scale:f64, w:&mut dyn Write){
+pub fn flipping_to(assets: &Assets, e: ElementTag, center: V2, scale: f64, w: &mut dyn Write) {
     let eo = opposite_element(e);
-    let to_color = element_colors_back[e];
-    let from_color = element_colors_back[eo];
+    let to_color = ELEMENT_COLORS_BACK[e];
+    let from_color = ELEMENT_COLORS_BACK[eo];
     let element_graphic = {
         Displaying(|w| {
-            assets.element(e).by_grav(
-                both_dims(FLIP_RINGS_RAD),
-                MIDDLE_MIDDLE,
-                1.0,
-                w,
-            )
+            assets
+                .element(e)
+                .by_grav(both_dims(FLIP_RINGS_RAD), MIDDLE_MIDDLE, 1.0, w)
         })
     };
-    flip_rings(to_color, from_color, &element_graphic, center, scale, w);
+    flip_rings(
+        to_color,
+        from_color,
+        &element_graphic,
+        center,
+        scale,
+        0.0,
+        w,
+    );
 }
 
-pub fn dual_color_patch(assets: &SvgAssets, e1: ElementTag, e2: ElementTag, bounds:Rect, w: &mut dyn Write) {
-    let color_left = element_colors_back[e1];
-    let color_right = element_colors_back[e2];
-    let sd = bounds.span().min();
+pub fn dual_color_patch(
+    assets: &Assets,
+    e1: ElementTag,
+    e2: ElementTag,
+    bounds: Rect,
+    w: &mut dyn Write,
+) {
+    let color_left = ELEMENT_COLORS_BACK[e1];
+    let color_right = ELEMENT_COLORS_BACK[e2];
     let splat_span = V2::new(205.18423, 224.67136);
-    let scale = bounds.span().component_div(&splat_span).min()*0.78;
-    let offset = bounds.center() - scale*splat_span/2.0;
-    let (c1, c2) = tilted_pair(splat_span/2.0, splat_span.x*0.17);
+    let scale = bounds.span().component_div(&splat_span).min() * 0.78;
+    let offset = bounds.center() - scale * splat_span / 2.0;
+    let (c1, c2) = tilted_pair(splat_span / 2.0, splat_span.x * 0.17);
     let e1d = Displaying(|w| assets.element(e1).by_grav(c1, MIDDLE_MIDDLE, 0.6, w));
     let e2d = Displaying(|w| assets.element(e2).by_grav(c2, MIDDLE_MIDDLE, 0.6, w));
-    
+
     write!(
         w,
         r##"<g
@@ -1253,25 +1707,31 @@ pub fn dual_color_patch(assets: &SvgAssets, e1: ElementTag, e2: ElementTag, boun
     ).unwrap();
 }
 
-pub fn come_on_down(assets:&SvgAssets, e:ElementTag, bounds:Rect, to:&mut dyn Write) {
+pub fn come_on_down(assets: &Assets, e: ElementTag, bounds: Rect, to: &mut dyn Write) {
     let ea = assets.element(e);
-    come_on_down_specifically(assets, ea, ea, e, bounds, to);
+    come_on_down_specifically(ea, ea, e, bounds, to);
 }
-pub fn come_on_down_specifically(assets:&SvgAssets, left_asset:&Asset, right_asset:&Asset, ef:ElementTag, bounds:Rect, to:&mut dyn Write) {
-    let ec = element_colors_back[ef];
-    let er = bounds.span().x*0.19;
-    let escale = er/BIG_ELEMENT_RAD;
-    let sepx = er*1.26;
-    let sepy = er*0.8;
-    let hsep = sepx*2.0;
-    let cc = bounds.center() + V2::new(0.0, er*0.3);
+pub fn come_on_down_specifically(
+    left_asset: &Asset,
+    right_asset: &Asset,
+    ef: ElementTag,
+    bounds: Rect,
+    to: &mut dyn Write,
+) {
+    let ec = ELEMENT_COLORS_BACK[ef];
+    let er = bounds.span().x * 0.19;
+    let escale = er / BIG_ELEMENT_RAD;
+    let sepx = er * 1.26;
+    let sepy = er * 0.8;
+    let hsep = sepx * 2.0;
+    let cc = bounds.center() + V2::new(0.0, er * 0.3);
     let c1off = V2::new(-sepx, -sepy);
     let c1 = cc + c1off;
     let c2 = cc - c1off;
     let codspan = 67.3;
-    let codscale = hsep/codspan;
-    let codanchor = V2::new(9.29, 41.64)*codscale;
-    let codoffset = V2::new(c1.x - codanchor.x, c1.y - er*0.6 - codanchor.y);
+    let codscale = hsep / codspan;
+    let codanchor = V2::new(9.29, 41.64) * codscale;
+    let codoffset = V2::new(c1.x - codanchor.x, c1.y - er * 0.6 - codanchor.y);
     write!(to, r##"<g
      inkscape:label="Layer 1"
      inkscape:groupmode="layer"
@@ -1286,14 +1746,19 @@ pub fn come_on_down_specifically(assets:&SvgAssets, left_asset:&Asset, right_ass
     right_asset.centered(c2, escale, to);
 }
 
-pub fn overplace(blank_circle:&Asset, placing:&Asset, over:&Asset, bounds:Rect, to:&mut dyn Write){
-    let pr = placing.bounds.x/2.0;
-    let tr = over.bounds.x/2.0;
-    let sep = pr*1.5;
-    let br = pr*1.2;
+pub fn overplace(
+    blank_circle: &Asset,
+    placing: &Asset,
+    over: &Asset,
+    bounds: Rect,
+    to: &mut dyn Write,
+) {
+    let pr = placing.bounds.x / 2.0;
+    let tr = over.bounds.x / 2.0;
+    let sep = pr * 1.5;
     let tsp = pr + sep + tr;
-    let tsph = tsp/2.0;
-    let scale = bounds.span().y*0.8/tsp;
+    let tsph = tsp / 2.0;
+    let scale = bounds.span().y * 0.8 / tsp;
     let center = bounds.center();
     let pc = V2::new(0.0, -tsph + pr);
     let bc = pc;
@@ -1301,45 +1766,59 @@ pub fn overplace(blank_circle:&Asset, placing:&Asset, over:&Asset, bounds:Rect, 
     let placingd = &Displaying(|w| placing.centered(pc, 1.0, w));
     let overd = &Displaying(|w| over.centered(tc, 1.0, w));
     let blankd = &Displaying(|w| blank_circle.centered(bc, 1.2, w));
-    write!(to, r##"<g transform="translate({},{}) scale({scale})">{overd}{blankd}{placingd}</g>
-    "##, center.x, center.y).unwrap();
+    write!(
+        to,
+        r##"<g transform="translate({},{}) scale({scale})">{overd}{blankd}{placingd}</g>
+    "##,
+        center.x, center.y
+    )
+    .unwrap();
 }
 
-pub fn generate_assets(assets: &Rc<SvgAssets>)-> Rc<GeneratedAssets> {
-    fn flip_asset_for(assets: &Rc<SvgAssets>, e: ElementTag) -> Asset {
-        let b = both_dims(FLIP_RINGS_SPAN);
-        Asset {
-            bounds: b,
-            render: Rc::new({
-                let assets = assets.clone();
-                move |p, s, w| {
-                    flip_rings(
-                        element_colors_back[e],
-                        element_colors_back[opposite_element(e)],
-                        &Displaying(|w| {
-                            assets.element(e).by_ul(
-                                both_dims(FLIP_RINGS_RAD - BIG_ELEMENT_RAD),
-                                1.0,
-                                w,
-                            )
-                        }),
-                        // p + both_dims(FLIP_RINGS_RAD),
-                        p + both_dims(FLIP_RINGS_RAD)*s,
-                        s,
-                        w,
-                    )
-                }
-            }),
-        }
-    }
-    Rc::new(GeneratedAssets {
-        flip_field: flip_asset_for(&assets, FIELD_I),
-        flip_forest: flip_asset_for(&assets, FOREST_I),
-        flip_mountain: flip_asset_for(&assets, MOUNTAIN_I),
-        flip_volcano: flip_asset_for(&assets, VOLCANO_I),
-        flip_lake: flip_asset_for(&assets, LAKE_I),
-        flip_ice: flip_asset_for(&assets, ICE_I),
-        flip_tomb: flip_asset_for(&assets, TOMB_I),
-        flip_void: flip_asset_for(&assets, VOID_I),
-    })
+pub fn do_sheet(span: V2, inserting: &impl Display, to: &mut dyn Write) {
+    let span_x = span.x;
+    let span_y = span.y;
+    write!(
+        to,
+        r##"<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created partially with Inkscape (http://www.inkscape.org/) but primarily through codegen -->
+
+<svg
+   width="{span_x}mm"
+   height="{span_y}mm"
+   viewBox="0 0 {span_x} {span_y}"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.3.1 (91b66b0783, 2023-11-16)"
+   sodipodi:docname="card front template.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="1.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     inkscape:zoom="0.64462111"
+     inkscape:cx="197.79061"
+     inkscape:cy="62.827604"
+     inkscape:window-width="{span_x}"
+     inkscape:window-height="{span_y}"
+     inkscape:window-x="44"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs1" />
+  {inserting}
+</svg>
+"##,
+    )
+    .unwrap();
 }
