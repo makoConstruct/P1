@@ -1,194 +1,184 @@
 use std::{
-    collections::HashMap,
-    f64::consts::TAU,
-    fs::{read_to_string, write},
+    collections::HashSet,
+    fs::{create_dir, read_dir, remove_file, File},
+    io::Write,
+    os::unix::ffi::OsStrExt,
     path::Path,
-    process::Command,
+    rc::Rc,
 };
 
+//core logic is in main, extended logic in generation, piles of uninteresting stuff in boring
 mod boring;
-use boring::*;
+pub use boring::*;
+mod generation;
 
-// #[derive(Serialize)]
-// struct CardFrontParams<'a> {
-//     inserting:&'a str,
-// }
-
-// fn do_end(tt:&TinyTemplate, name:&str, description:&str, inserting:Option<&str>)-> String {
-//     let mut out = String::new();
-//     tt.
-//     out
-// }
-
-fn elements() -> impl Iterator<Item = ElementTag> {
-    0..8
+fn cards_to_remove() -> HashSet<&'static str> {
+    HashSet::from([])
 }
 
-struct CardSpec {
-    // likes: Vec<ElementTag>,
-    name: String,
-    generate: Box<dyn Fn() -> String>,
+fn gen_cards(assets: &Rc<Assets>) {
+    let output_dir = Path::new("generated_card_svgs");
+    //clear dir if present
+    if let Ok(dens) = read_dir(&output_dir) {
+        for item_m in dens {
+            if let Ok(item) = item_m {
+                remove_file(item.path()).unwrap();
+            }
+        }
+    } else {
+        //create otherwise
+        drop(create_dir(&output_dir));
+    }
+
+    let ends_specs = generation::end_specs(assets);
+    let means_specs = generation::means_specs(assets);
+    let land_specs = generation::land_specs(assets);
+    let all_cards = ends_specs
+        .into_iter()
+        .chain(means_specs.into_iter())
+        .chain(land_specs.into_iter());
+    
+    // otherwise, just gen one per category
+    let gen_all = false;
+
+    for specs in all_cards {
+        let specsi: Box<dyn Iterator<Item=CardSpec>> = if gen_all {
+            Box::new(specs.iter())
+        } else {
+            Box::new(specs.iter().take(1))
+        };
+        for spec in specsi {
+            (spec.generate_front)(
+                &mut File::create(
+                    output_dir.join(&format!("{}[face,{}].svg", &spec.name, spec.repeat)),
+                )
+                .unwrap(),
+            );
+            (spec.generate_back)(
+                &mut File::create(output_dir.join(&format!("{}[back].svg", &spec.name))).unwrap(),
+            );
+        }
+    }
+
+    // let to_remove = cards_to_remove();
+
+    // drop(create_dir("final cards"));
+
+    // if let Ok(ecsf) = read_dir("handmade cards") {
+    //     for c in ecsf {
+    //         if let Ok(cc) = c {
+    //             if to_remove.contains(cc.file_name().to_str().unwrap()) { continue; }
+    //             fs::copy(cc.path(), Path::new("final cards").join(cc.file_name())).unwrap();
+    //         }
+    //     }
+    // }
+}
+
+fn demo_boards(assets: &Rc<Assets>) {
+    let output_dir = Path::new("boards");
+    //clear dir if present
+    if let Ok(dens) = read_dir(&output_dir) {
+        for item_m in dens {
+            if let Ok(item) = item_m {
+                remove_file(item.path()).unwrap();
+            }
+        }
+    } else {
+        //create otherwise
+        drop(create_dir(&output_dir));
+    }
+
+    fn do_boards(
+        assets: &Rc<Assets>,
+        weights: &Vec<f64>,
+        rad: usize,
+        count: usize,
+        output_dir: &Path,
+    ) {
+        let mut weights_str = Vec::new();
+        for w in weights.iter() {
+            write!(&mut weights_str, "{w}_").unwrap();
+        }
+        let ws = String::from_utf8(weights_str).unwrap();
+        for i in 0..count {
+            generation::generate_board(
+                &assets,
+                &weights,
+                rad,
+                true,
+                i as u64,
+                &mut File::create(&output_dir.join(format!("{}board{i}.svg", &ws))).unwrap(),
+            );
+        }
+    }
+    do_boards(
+        &assets,
+        &vec![12.7, 7.0, 6.0, 5.0],
+        3,
+        6,
+        &Path::new("boards"),
+    );
+}
+
+use mako_infinite_shuffle::OpsRef;
+use resvg::usvg::fontdb::Database;
+fn get_fonts()-> Database {
+    let mut fonts = Database::new();
+    // fonts
+    //     .load_font_file(&Path::new("Rubik-VariableFont_wght.ttf"))
+    //     .unwrap();
+    fonts.load_system_fonts();
+    fonts
+}
+fn svg_to_png_using_resvg(p: &Path, output_dir: &Path, fonts: &Database) {
+    use resvg::{tiny_skia, usvg::{ Options, Tree}};
+    let svgdata = Tree::from_data(&std::fs::read(p).unwrap(), &Options::default()).unwrap();
+    let pixmap_size = svgdata.view_box.rect.size().to_int_size();
+    let mut pixmap = tiny_skia::Pixmap::new(pixmap_size.width(), pixmap_size.height()).unwrap();
+    resvg::render(
+        &svgdata,
+        tiny_skia::Transform::default(),
+        &mut pixmap.as_mut(),
+    );
+    pixmap
+        .save_png(&output_dir.join(format!(
+            "{}.png",
+            String::from_utf8(Vec::from(p.file_stem().unwrap().as_bytes())).unwrap()
+        )))
+        .unwrap();
+}
+
+
+#[deprecated(note = "everything just renders as transparent blank, even though their test cases run correctly on my machine. Version 0.39.0. This might start working on the next version. I notice the APIs for this are different, and some of this stuff required me to guess at APIs.")]
+fn render_svgs_with_resvg() {
+    let output_dir = Path::new("generated_card_pngs");
+    let input_dir = Path::new("generated_card_svgs");
+    //clear dir if present
+    if let Ok(dens) = read_dir(&output_dir) {
+        for item_m in dens {
+            if let Ok(item) = item_m {
+                remove_file(item.path()).unwrap();
+            }
+        }
+    } else {
+        //create otherwise
+        drop(create_dir(&output_dir));
+    }
+
+    let fonts = get_fonts();
+
+    for item_m in read_dir(&input_dir).unwrap() {
+        if let Ok(item) = item_m {
+            svg_to_png_using_resvg(&item.path(), output_dir, &fonts);
+        }
+    }
 }
 
 fn main() {
-    // let mut tt = TinyTemplate<'static>::new();
-    // tt.add_template("end_front", &read_to_string(Path::new("card front template.svg")).unwrap());
-    {
-        //clear dir if present
-        if let Ok(dens) = std::fs::read_dir("generated_card_svgs") {
-            for item_m in dens {
-                if let Ok(item) = item_m {
-                    std::fs::remove_file(item.path()).unwrap();
-                }
-            }
-        } else {
-            //create otherwise
-            drop(std::fs::create_dir("generated_card_svgs"));
-        }
-        std::env::set_current_dir("generated_card_svgs/").unwrap();
+    let assets = Rc::new(Assets::load(Path::new("assets")));
 
-        let mut specs = Vec::new();
-
-        for e in elements() {
-            specs.push(CardSpec {
-                name: format!("{}_1", element_names[e]),
-                generate: Box::new(move || end_front(&(element_g[e])(end_graphic_center, 1.0), 1)),
-            })
-        }
-
-        for e1 in elements() {
-            for e2 in elements() {
-                if e1 >= e2 {
-                    continue;
-                }
-                specs.push(CardSpec {
-                    name: format!("{}_{}", element_names[e1], element_names[e2]),
-                    generate: Box::new(move || end_front(&paired(e1, e2, false), 2)),
-                })
-            }
-        }
-
-        for e in elements() {
-            specs.push(CardSpec {
-                name: format!("just_1_{}", element_names[e]),
-                generate: Box::new(move || {
-                    end_front(
-                        &format!(
-                            "{}\n{}",
-                            &element_g[e](
-                                end_graphic_center + V2::new(0.0, graphic_rad * 0.23),
-                                0.83
-                            ),
-                            &just_1(element_colors_bold(e))
-                        ),
-                        3,
-                    )
-                }),
-            })
-        }
-        for e1 in elements() {
-            for e2 in elements() {
-                for e3 in elements() {
-                    if e1 > e2 || e2 > e3 {
-                        continue;
-                    }
-                    let tilt = -TAU / 24.0;
-                    let arc = TAU / 3.0;
-                    let r = graphic_rad * 0.48;
-                    let scale = 0.5;
-
-                    specs.push(CardSpec {
-                        name: format!(
-                            "{}_{}_{}",
-                            element_names[e1], element_names[e2], element_names[e3]
-                        ),
-                        generate: Box::new(move || {
-                            end_front(
-                                &format!(
-                                    "{}{}{}",
-                                    element_g[e1](
-                                        end_graphic_center + from_angle_mag(tilt, r),
-                                        scale
-                                    ),
-                                    element_g[e2](
-                                        end_graphic_center + from_angle_mag(tilt + arc, r),
-                                        scale
-                                    ),
-                                    element_g[e3](
-                                        end_graphic_center + from_angle_mag(tilt + arc * 2.0, r),
-                                        scale
-                                    ),
-                                ),
-                                2,
-                            )
-                        }),
-                    });
-                }
-            }
-        }
-
-        for e in elements() {
-            specs.push(CardSpec {
-                name: format!("max_{}_cluster", element_names[e]),
-                generate: Box::new(move || {
-                    end_front(
-                        &format!(
-                            "{}{}",
-                            big_splat(element_colors_back[e]),
-                            element_g[e](end_graphic_center, 0.7),
-                        ),
-                        1,
-                    )
-                }),
-            });
-        }
-
-        for e in elements() {
-            specs.push(CardSpec {
-                name: format!("forbid_{}", element_names[e]),
-                generate: Box::new(move || {
-                    end_front(
-                        &format!("{}{}", element_g[e](end_graphic_center, 1.0), negatory(),),
-                        7,
-                    )
-                }),
-            })
-        }
-
-        for e in elements() {
-            specs.push(CardSpec {
-                name: format!("forbid_{}", element_names[e]),
-                generate: Box::new(move || {
-                    end_front(
-                        &format!("{}{}", element_g[e](end_graphic_center, 1.0), negatory(),),
-                        13,
-                    )
-                }),
-            });
-        }
-
-        for e1 in elements() {
-            for e2 in elements() {
-                if e1 < e2 {
-                    continue;
-                }
-                specs.push(CardSpec {
-                    name: format!("forbid_{}_{}", element_names[e1], element_names[e2]),
-                    generate: Box::new(move || {
-                        end_front(&format!("{}{}", paired(e1, e2, true), negatory()), 9)
-                    }),
-                });
-            }
-        }
-
-        for spec in specs.iter() {
-            write(
-                Path::new(&format!("{}.svg", &spec.name)),
-                &(spec.generate)(),
-            )
-            .unwrap();
-        }
-
-        std::env::set_current_dir("../").unwrap();
-    }
+    gen_cards(&assets);
+    // svg_to_png_using_resvg(&Path::new("simple-case.svg"), &Path::new(""), &get_fonts())
+    // render_svgs_with_resvg();
+    // demo_boards(&assets);
 }

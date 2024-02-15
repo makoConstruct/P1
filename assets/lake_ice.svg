@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="107.29892mm"
+   height="107.29921mm"
+   viewBox="0 0 107.29892 107.29921"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.3.1 (91b66b0783, 2023-11-16)"
+   sodipodi:docname="lake-ice.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     inkscape:zoom="0.77771465"
+     inkscape:cx="397.31796"
+     inkscape:cy="561.25984"
+     inkscape:window-width="1876"
+     inkscape:window-height="1032"
+     inkscape:window-x="44"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs1">
+    <clipPath
+       clipPathUnits="userSpaceOnUse"
+       id="clipPath70">
+      <path
+         id="path71"
+         style="fill:#e4afaf;fill-opacity:1;stroke-width:23.4006;stroke-linecap:round;stroke-linejoin:round"
+         d="m 1230.1145,518.09799 h 69.5219 v 62.09741 62.09729 h -69.5219 z"
+         sodipodi:nodetypes="cccccc" />
+    </clipPath>
+    <clipPath
+       clipPathUnits="userSpaceOnUse"
+       id="clipPath69">
+      <path
+         id="path70"
+         style="fill:#e4afaf;fill-opacity:1;stroke-width:9.92476;stroke-linecap:round;stroke-linejoin:round"
+         d="m 2079.7215,7955.0787 v 29.4859 h -26.337 -26.337 v -29.4859 z"
+         sodipodi:nodetypes="cccccc" />
+    </clipPath>
+  </defs>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-1.5319825e-5,-4.2702636e-5)">
+    <g
+       id="g1"
+       transform="translate(-3645.3414,-1494.0253)">
+      <g
+         id="g77"
+         transform="rotate(180,3643.9812,1536.9774)">
+        <g
+           id="g5-2"
+           transform="translate(2358.857,946.08454)"
+           clip-path="url(#clipPath70)">
+          <circle
+             style="fill:#c3edf1;fill-opacity:1;stroke-width:14.1468;stroke-linecap:round;stroke-linejoin:round"
+             id="circle482-4"
+             cx="-580.19531"
+             cy="1230.1144"
+             r="53.649605"
+             transform="rotate(-90)" />
+          <path
+             id="path482-7"
+             style="fill:none;fill-opacity:1;stroke:#a5dae0;stroke-width:13.3154;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+             d="m 1259.5493,578.81653 c -2.7239,6.05224 -8.1101,10.00981 -14.13,10.38163 -6.02,0.36357 -11.7591,-2.8975 -15.3055,-9.00185 -3.5463,-6.10458 -9.2855,-9.3739 -15.3049,-9.00302 -6.0202,0.36381 -11.4061,4.3301 -14.1296,10.38257"
+             inkscape:connector-curvature="0"
+             sodipodi:nodetypes="ccscc"
+             inkscape:export-filename="/home/mako/work/witching lands/land 2021/water.png"
+             inkscape:export-xdpi="588.79651"
+             inkscape:export-ydpi="588.79651" />
+        </g>
+        <g
+           id="g496-0"
+           transform="matrix(0,-2.3578005,-2.3578005,0,22345.46,6367.7509)"
+           inkscape:export-filename="cardgen/ice.svg"
+           inkscape:export-xdpi="96"
+           inkscape:export-ydpi="96"
+           clip-path="url(#clipPath69)">
+          <circle
+             style="fill:#e1eff0;fill-opacity:1;stroke-width:6.00001;stroke-linecap:round;stroke-linejoin:round"
+             id="circle495-2"
+             cx="2053.3845"
+             cy="7955.0786"
+             r="22.754089" />
+          <path
+             sodipodi:nodetypes="cc"
+             inkscape:connector-curvature="0"
+             d="m 2053.3845,7966.9504 v -23.7436"
+             style="fill:none;fill-opacity:1;stroke:#f4fcfd;stroke-width:6.32004;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+             id="path495-1"
+             inkscape:export-filename="/home/mako/work/witching lands/land 2021/ice.png"
+             inkscape:export-xdpi="588.79651"
+             inkscape:export-ydpi="588.79651" />
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>
