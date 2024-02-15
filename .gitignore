@@ -1,3 +1,4 @@
 target
-generated_card_svgs
+generated_card_svgs/*
+generated_card_pngs/*
 Cargo.lock

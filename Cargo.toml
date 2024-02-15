@@ -1,5 +1,6 @@
 [package]
 name = "cardgen"
+description = "generates card svgs (and eventually pngs) for P1"
 version = "0.1.0"
 edition = "2021"
 
@@ -9,3 +10,8 @@ edition = "2021"
 nalgebra = "0.32.3"
 # xmltree = "0.10"
 elementtree = "1.2.3"
+rand = "0.8.5"
+noisy_float = "0.2.0"
+resvg = "0.39.0"
+mako_infinite_shuffle = "0.3.5"
+# mako_infinite_shuffle = { path = "../../../programming/colab/mako_infinite_shuffle/" }
