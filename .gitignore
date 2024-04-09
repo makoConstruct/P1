@@ -1,4 +1,11 @@
 target
 generated_card_svgs/*
 generated_card_pngs/*
+cards_alt_seed/*
+boards/*
+launch.json
+settings.json
 Cargo.lock
+P1_manual.html
+P1manual.svg
+todo.md

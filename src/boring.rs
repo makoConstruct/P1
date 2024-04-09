@@ -1,16 +1,9 @@
 //performance refactor that could be done: take mut Writers instead of outputting Strings
 
 use elementtree::WriteOptions;
-use mako_infinite_shuffle::{Cross, Indexing, OpsRef};
+use mako_infinite_shuffle::{Cross, Indexing};
 use nalgebra::{Rotation2, Vector2};
-use std::{
-    f64::consts::TAU,
-    fmt::Display,
-    io::Write,
-    path::{Path, PathBuf},
-    process::Command,
-    rc::Rc,
-};
+use std::{f64::consts::TAU, fmt::Display, io::Write, path::Path, rc::Rc};
 
 pub fn from_angle_mag(angle: f64, mag: f64) -> V2 {
     V2::new(angle.cos() * mag, angle.sin() * mag)
@@ -27,13 +20,6 @@ pub fn rotate(rotation: V2, v: V2) -> V2 {
 }
 pub fn both_dims(v: f64) -> V2 {
     V2::new(v, v)
-}
-
-pub fn render_png(name: &str) {
-    let mut c = Command::new("inkscape");
-    c.arg("--export-type=\"png\"");
-    c.arg(&format!("{}.svg", name));
-    c.output().unwrap();
 }
 
 pub struct Displaying<F: Fn(&mut dyn Write)>(pub F);
@@ -76,12 +62,26 @@ pub const ELEMENT_G: [ElementGenerator; 8] = [
 pub const ELEMENT_NAMES: [&'static str; 8] = [
     "field", "forest", "mountain", "volcano", "lake", "ice", "tomb", "void",
 ];
+pub const ELEMENT_NAMES_PLURAL: [&'static str; 8] = [
+    "fields",
+    "forests",
+    "mountains",
+    "volcanoes",
+    "lakes",
+    "ice sheets",
+    "tombs",
+    "voids",
+];
 pub const ELEMENT_PAIR_NAMES: [&'static str; 4] =
     ["field/forest", "mountain/volcano", "lake/ice", "tomb/void"];
+pub fn pair_name_for(e: ElementTag) -> &'static str {
+    ELEMENT_PAIR_NAMES[e / 2]
+}
 pub const ELEMENT_COLORS_BACK: [&'static str; 8] = [
     "b5efb9", "94cf9c", "eeeca7", "efcfcf", "c3edf1", "e1eff0", "ebebeb", "969696",
 ];
-pub const BOLD_COLOR_FOR_GRAPHIC: &'static str = "4b4b4b";
+// pub const BOLD_COLOR_FOR_GRAPHIC: &'static str = "4b4b4b";
+pub const BOLD_COLOR_FOR_GRAPHIC: &'static str = "c3c3c3";
 pub const ELEMENT_COLORS_FRONT: [&'static str; 8] = [
     "a3e2a7", "7eb47f", "e5e383", "f2b7b7", "a5dae0", "f4fcfd", "dedede", "414141",
 ];
@@ -117,16 +117,26 @@ pub fn each_nonequal_element() -> impl Indexing<Item = (ElementTag, ElementTag)>
     Cross(elements(), 0..7).into_map(|(a, b)| (a, if a > b { b } else { b + 1 }))
 }
 pub fn each_unordered_nonequal_pairing() -> impl Indexing<Item = (ElementTag, ElementTag)> {
-    mako_infinite_shuffle::KSubsets::new(8,2).into_map(|v| (v[0], v[1]))
+    mako_infinite_shuffle::KSubsets::new(8, 2).into_map(|v| (v[0], v[1]))
 }
 pub fn each_unordered_pairing() -> impl Indexing<Item = (ElementTag, ElementTag)> {
-    mako_infinite_shuffle::KSubmultisets::new(8,2).into_map(|v| (v[0], v[1]))
+    mako_infinite_shuffle::KSubmultisets::new(8, 2).into_map(|v| (v[0], v[1]))
 }
 pub fn each_unordered_nonequal_triple() -> impl Indexing<Item = (ElementTag, ElementTag, ElementTag)>
 {
-    mako_infinite_shuffle::KSubsets::new(8,3).into_map(|v| (v[0], v[1], v[2]))
+    mako_infinite_shuffle::KSubsets::new(8, 3).into_map(|v| (v[0], v[1], v[2]))
 }
-pub type CardGen = Box<dyn Indexing<Item = CardSpec> + 'static>;
+pub fn each_unordered_triple() -> impl Indexing<Item = (ElementTag, ElementTag, ElementTag)> {
+    mako_infinite_shuffle::KSubmultisets::new(8, 3).into_map(|v| (v[0], v[1], v[2]))
+}
+
+pub struct CardGen {
+    // this many are guaranteed to be present in the pool
+    pub min_count: usize,
+    // the total proportion of the pool that you want to consist of this one. Try to keep these summing to 1.0 so that the meaning of the numbers in code is clear, but it'll work okay regardless
+    pub desired_proportion: f64,
+    pub generator: Box<dyn Indexing<Item = CardSpec> + 'static>,
+}
 
 pub type V2 = Vector2<f64>;
 // pub type U2 = Unit<V2>;
@@ -138,6 +148,14 @@ pub type R2 = Rotation2<f64>;
 // pub const end_graphic_center:V2 = V2::new(300.0, 525.0);
 // pub const end_graphic_allowable_rad:f64 = 262.5;
 
+// this was for the rounded guy
+// pub const GUY2_ANCHOR: V2 = V2::new(19.912, 45.846);
+pub const GUY2_ANCHOR: V2 = V2::new(21.243, 61.013);
+pub const GUY2_DEAD_ANCHOR: V2 = V2::new(28.7, 47.095);
+pub const GUY2_MAGE_ANCHOR: V2 = V2::new(36.380, 66.810);
+pub const GUY2_RISEN_ANCHOR: V2 = V2::new(20.2, 45.75);
+pub const GUY2_RAD: f64 = 20.2;
+pub const GUY2_ADJACENCY_SMALLERNESS: f64 = 0.7;
 pub const BIG_ELEMENT_SPAN: f64 = 107.299;
 pub const BIG_ELEMENT_DIMENSIONS: V2 = V2::new(BIG_ELEMENT_SPAN, BIG_ELEMENT_SPAN);
 pub const BIG_ELEMENT_RAD: f64 = BIG_ELEMENT_SPAN / 2.0;
@@ -499,68 +517,101 @@ pub fn tomb_g(center: V2, scale: f64, to: &mut dyn Write) {
 }
 
 pub fn end_front_inner(inserting: &impl Display, scores: String, to: &mut dyn Write) {
+    let number_offset = if &scores == "1" { 74.8 } else { 79.000023 };
     write!(to,
 r##"<g
      inkscape:label="Layer 1"
      inkscape:groupmode="layer"
      id="layer1"
-     transform="translate(0,0)">
+     transform="translate(0,-2e-4)">
     <polygon
        fill="#929497"
-       points="144,198 144,0 0,0 0,198 "
-       id="assetback"
+       points="144,0 0,0 0,198 144,198 "
+       id="polygon1000"
        transform="matrix(1.1024306,0,0,1.1024306,0,2e-4)"
        style="fill:#f1f2f2;fill-opacity:1;stroke-width:0.24" />
-    <path
-       id="square"
-       style="fill:#f1f2f2;fill-opacity:1;stroke:none"
-       d="m 9.92142,69.45312 v 9.92188 119.0625 9.92187 h 9.92239 119.0625 9.92187 V 198.4375 79.375 69.45312 h -9.92187 -119.0625 z" />
     <path
        fill="#ffffff"
        stroke="#ec1e28"
        stroke-width="0.374174"
-       d="M 138.9062,208.35959 H 19.8437 c -5.4799,0 -9.9221,-4.4417 -9.9221,-9.9219 V 19.844 c 0,-5.4802 4.4422,-9.9219 9.9221,-9.9219 h 119.0625 c 5.48,0 9.9218,4.4417 9.9218,9.9219 v 178.59369 c 0,5.4802 -4.4418,9.9219 -9.9218,9.9219 z"
-       id="cutline"
+       d="M 138.9062,208.3596 H 19.8437 c -5.4799,0 -9.9221,-4.4417 -9.9221,-9.9219 V 19.844 c 0,-5.4802 4.4422,-9.9219 9.9221,-9.9219 h 119.0625 c 5.48,0 9.9218,4.4417 9.9218,9.9219 v 178.5937 c 0,5.4802 -4.4418,9.9219 -9.9218,9.9219 z"
+       id="path1000"
        style="fill:#f1f2f2;fill-opacity:1;stroke:none" />
     <path
-       id="heading"
-       style="fill:#4e4e4e;fill-opacity:1;stroke:none;stroke-width:12.3172;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
-       d="M 0 0.0002 L 0 69.453325 L 67.879061 69.453325 C 69.026866 69.453069 70.1277 68.996781 70.939339 68.185185 L 74.891036 64.229354 L 77.758561 61.357695 C 78.212915 60.949318 78.702724 60.766517 79.375 60.766517 C 80.047275 60.766517 80.537086 60.949318 80.991439 61.357695 L 83.858964 64.229354 L 87.810661 68.185185 C 88.6223 68.996781 89.723134 69.453069 90.870939 69.453325 L 158.75 69.453325 L 158.75 0.0002 L 0 0.0002 z " />
+       id="path1023"
+       style="fill:#d6d6d6;fill-opacity:1;stroke:none;stroke-width:12.3172;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       d="M 0,69.4531 V 0 H 71.4633 L 79.375,8.355 87.2867,0 H 158.75 v 69.4531 z" />
+    <path
+       id="path1001"
+       style="fill:#3f3f3f;fill-opacity:1;stroke:none;stroke-width:12.3172;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       d="m 0,0 v 69.4531 l 71.351056,0 8.023943,-8.473528 8.023943,8.473528 71.351058,0 V 0 Z"
+       sodipodi:nodetypes="cccccccc" />
     <text
        xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:500;font-stretch:normal;font-size:49.3895px;line-height:1.25;font-family:Rubik;-inkscape-font-specification:'Rubik Medium';letter-spacing:0px;word-spacing:0px;fill:#eeeeee;fill-opacity:1;stroke:none;stroke-width:1.23474;text-anchor:middle;text-align:center"
-       x="79"
-       y="53.854977"
-       id="pointscore"><tspan
+       style="font-style:normal;font-variant:normal;font-weight:500;font-stretch:normal;font-size:49.3895px;line-height:1.25;font-family:Rubik;-inkscape-font-specification:'Rubik Medium';text-align:center;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#eeeeee;fill-opacity:1;stroke:none;stroke-width:1.23474"
+       x="{number_offset}"
+       y="57.742939"
+       id="text1001"><tspan
          sodipodi:role="line"
-         id="tspan4"
-         x="63.172646"
-         y="53.854977"
-         style="font-style:normal;font-variant:normal;font-weight:500;font-stretch:normal;font-family:Rubik;-inkscape-font-specification:'Rubik Medium';fill:#eeeeee;fill-opacity:1;stroke-width:1.23474;text-anchor:middle;text-align:center">{scores}</tspan></text>
+         id="tspan1001"
+         x="{number_offset}"
+         y="57.742939"
+         style="font-style:normal;font-variant:normal;font-weight:500;font-stretch:normal;font-family:Rubik;-inkscape-font-specification:'Rubik Medium';text-align:center;text-anchor:middle;fill:#eeeeee;fill-opacity:1;stroke-width:1.23474">{scores}</tspan></text>
     {inserting}
   </g>"##,
     ).unwrap();
 }
 
+#[derive(Clone, Eq, PartialEq)]
+pub enum CardSpecKind {
+    Kill,
+    Move,
+    Change,
+    Preference,
+}
+pub use CardSpecKind::*;
 #[derive(Clone)]
 pub struct CardSpec {
     // likes: Vec<ElementTag>,
     pub name: String,
     pub repeat: usize,
+    pub level: usize,
+    pub properties: Vec<(CardSpecKind, Vec<ElementTag>)>,
+    // the amount this type of card's frequency should be changed from its baseline frequency
+    pub frequency_modifier: f64,
+    // the ratio of cards that are from this generator
     pub generate_front: Rc<dyn Fn(&mut dyn Write)>,
     pub generate_back: Rc<dyn Fn(&mut dyn Write)>,
 }
 impl CardSpec {
+    pub fn has_property(&self, p: CardSpecKind, e: ElementTag) -> bool {
+        self.properties
+            .iter()
+            .any(|ps| ps.0 == p && ps.1.iter().any(|es| *es == e))
+    }
     pub fn means_card(
         assets: &Rc<Assets>,
         name: String,
         filename: Option<String>,
         // the level of play on which this card should become available
         level: usize,
+        clown: bool,
+        repeat: usize,
+        properties: Vec<(CardSpecKind, Vec<usize>)>,
         front_graphic: Rc<dyn Fn(&mut dyn Write)>,
         back_text: String,
     ) -> Self {
-        Self::means_card_repeated(assets, name, filename, 1, level, front_graphic, back_text)
+        Self::means_card_repeated(
+            assets,
+            name,
+            filename,
+            repeat,
+            level,
+            clown,
+            properties,
+            front_graphic,
+            back_text,
+        )
     }
     pub fn means_card_repeated(
         assets: &Rc<Assets>,
@@ -569,6 +620,8 @@ impl CardSpec {
         repeated: usize,
         // the level of play on which this card should become available
         level: usize,
+        clown: bool,
+        properties: Vec<(CardSpecKind, Vec<usize>)>,
         front_graphic: Rc<dyn Fn(&mut dyn Write)>,
         back_text: String,
     ) -> Self {
@@ -580,6 +633,8 @@ impl CardSpec {
         Self {
             name: filename,
             repeat: repeated,
+            frequency_modifier: 1.0,
+            level,
             generate_front: {
                 let front_graphic = front_graphic.clone();
                 let name = name.clone();
@@ -594,9 +649,12 @@ impl CardSpec {
                         w,
                         &back_text,
                         level,
+                        clown,
+                        false,
                     );
                 }
             }),
+            properties,
         }
     }
     pub fn end_card_with_back_blurred_message(
@@ -604,14 +662,18 @@ impl CardSpec {
         name: String,
         front_graphic: Rc<dyn Display>,
         score: String,
+        repeat: usize,
         back_text: String,
+        elements_positive: Vec<ElementTag>,
         level: usize,
+        clown: bool,
     ) -> Self {
         let rcd = Rc::new(front_graphic);
         let sc = score.clone();
         Self {
             name,
-            repeat: 1,
+            repeat,
+            level,
             generate_front: {
                 let front_inner = rcd.clone();
                 Rc::new(move |w| {
@@ -627,9 +689,11 @@ impl CardSpec {
                 let front_inner = rcd.clone();
                 move |w| {
                     //you have to clone, because this lambda could be called multiple times, meaning it has to retain something to clone from to create the lambda ahead
-                    end_backing(&assets, &front_inner, w, &back_text, level);
+                    end_backing(&assets, &front_inner, w, &back_text, level, clown);
                 }
             }),
+            frequency_modifier: 1.0,
+            properties: vec![(Preference, elements_positive)],
         }
     }
 }
@@ -699,8 +763,9 @@ pub fn end_backing(
     to: &mut dyn Write,
     description: &str,
     level: usize,
+    clown: bool,
 ) {
-    backing(assets, inserting, to, description, level);
+    backing(assets, inserting, to, description, level, clown, true);
 }
 pub fn backing(
     assets: &Rc<Assets>,
@@ -708,16 +773,38 @@ pub fn backing(
     to: &mut dyn Write,
     description: &str,
     level: usize,
+    clown: bool,
+    is_end: bool,
 ) {
     let span = CARD_DIMENSIONS.x;
+    let marker_rad = span * 0.12;
+    let sep = span * 0.03;
     let level_marker = Displaying(|w| {
+        let mut offset = 0.0;
         if level >= 2 {
-            assets.level_2.by_grav(
+            assets.level_2.by_grav_rad(
                 cutline_bounds_shrunk_appropriately().br,
                 RIGHT_BOTTOM,
-                1.0,
+                marker_rad,
                 w,
             );
+            offset += marker_rad * 2.0 + sep;
+        }
+        if clown {
+            assets.clown.by_grav_rad(
+                cutline_bounds_shrunk_appropriately().br + V2::new(-offset, 0.0),
+                RIGHT_BOTTOM,
+                marker_rad,
+                w,
+            );
+        }
+    });
+    let end_bar = Displaying({
+        let assets = assets.clone();
+        move |w| {
+            if is_end {
+                assets.end_top_bar.by_ul(V2::new(0.0, 0.0), 1.0, w);
+            }
         }
     });
     write!(to,
@@ -789,19 +876,20 @@ r##"<?xml version="1.0" encoding="UTF-8" standalone="no"?>
        transform="matrix(1.1024306,0,0,1.1024306,0,2e-4)"
        style="fill:#f1f2f2;fill-opacity:1;stroke-width:0.24" />
     <g transform="matrix(-1,0,0,1,{span},0)" style="opacity:0.27;filter:url(#flipfilter)">
+    {end_bar}
     {inserting}
     </g>
+    {level_marker}
     <text
        xml:space="preserve"
        transform="matrix(0.26458333,0,0,0.26458333,-0.21640517,0)"
        id="text1"
-       style="font-weight:900;font-size:37px;font-family:'Inter UI';-inkscape-font-specification:'Rubik';text-align:center;vertical-align:bottom;white-space:pre;shape-inside:url(#descriptionrect);opacity:1;fill:#3e3e3e;fill-opacity:1;stroke:none;stroke-width:7.55906;stroke-linecap:round;stroke-linejoin:round"><tspan
+       style="font-weight:900;font-size:43px;font-family:'Inter UI';-inkscape-font-specification:'Rubik';text-align:center;vertical-align:bottom;white-space:pre;shape-inside:url(#descriptionrect);opacity:1;fill:#3e3e3e;fill-opacity:1;stroke:none;stroke-width:7.55906;stroke-linecap:round;stroke-linejoin:round"><tspan
          x="93.067162"
          y="126.73272"
          id="tspan3"><tspan
            style="font-weight:normal;font-family:Rubik;-inkscape-font-specification:Rubik"
            id="tspan2">{description}</tspan></tspan></text>
-    {level_marker}
   </g>
 </svg>
 "##,
@@ -838,7 +926,10 @@ pub fn just_1(color: &str, to: &mut dyn Write) {
 }
 
 pub fn big_splat(color: &str, to: &mut dyn Write) {
-    let scale = 0.54;
+    big_splat_scaled(color, 0.54, to);
+}
+
+pub fn big_splat_scaled(color: &str, scale: f64, to: &mut dyn Write) {
     let offset = offset_for_grav_scale(
         END_GRAPHIC_CENTER,
         MIDDLE_MIDDLE,
@@ -894,8 +985,8 @@ pub fn tilted_pair(center: V2, distance: f64) -> (V2, V2) {
 }
 
 pub fn paired(e1: ElementTag, e2: ElementTag, flipped: bool, to: &mut dyn Write) {
-    let sized = 0.6;
-    let spaced = 0.04;
+    let sized = 0.55;
+    let spaced = 0.08;
     let (mut c1, mut c2) = tilted_pair(END_GRAPHIC_CENTER, (sized + spaced) * BIG_ELEMENT_RAD);
     if flipped {
         std::mem::swap(&mut c1.y, &mut c2.y);
@@ -1042,7 +1133,8 @@ impl HexSpiral {
         HexLayerIter(self, layers)
     }
 }
-pub struct HexLayerIter(HexSpiral, usize);
+/// stops before the HexSpiral's layer exceeds the usize
+pub struct HexLayerIter(pub HexSpiral, pub usize);
 impl Iterator for HexLayerIter {
     type Item = Coord;
     fn next(&mut self) -> Option<Self::Item> {
@@ -1152,6 +1244,7 @@ pub fn assume_writes_utf8(f: impl Fn(&mut dyn Write)) -> String {
 #[derive(Clone)]
 pub struct Asset {
     pub render: Rc<dyn Fn(V2, f64, f64, &mut dyn Write)>,
+    pub anchor: V2,
     pub bounds: V2,
 }
 impl Asset {
@@ -1180,6 +1273,14 @@ impl Asset {
             to,
         );
     }
+    pub fn by_grav_rad(&self, anchor: V2, grav: Gravity, rad: f64, to: &mut dyn Write) {
+        let scale = (rad + rad) / self.bounds.max();
+        self.by_ul(
+            offset_for_grav(anchor, grav, self.bounds * scale),
+            scale,
+            to,
+        );
+    }
     pub fn by_grav_rotated(
         &self,
         anchor: V2,
@@ -1188,7 +1289,7 @@ impl Asset {
         rotation: f64,
         to: &mut dyn Write,
     ) {
-        self.by_anchor_rotated(
+        self.by_anchor_given_rotated(
             anchor,
             anchor_for_grav(grav, self.bounds),
             scale,
@@ -1196,7 +1297,14 @@ impl Asset {
             to,
         );
     }
-    pub fn by_anchor(
+    pub fn by_anchor(&self, anchor_screenspace: V2, scale: f64, to: &mut dyn Write) {
+        self.by_anchor_given(anchor_screenspace, self.anchor, scale, to);
+    }
+    pub fn by_anchor_rad(&self, anchor_screenspace: V2, rad: f64, to: &mut dyn Write) {
+        let scale = rad / (self.bounds.x / 2.0);
+        self.by_anchor_given(anchor_screenspace, self.anchor, scale, to);
+    }
+    pub fn by_anchor_given(
         &self,
         anchor_screenspace: V2,
         anchor_within: V2,
@@ -1206,7 +1314,7 @@ impl Asset {
         let ul = anchor_screenspace - anchor_within * scale;
         self.by_ul(ul, scale, to);
     }
-    pub fn by_anchor_rotated(
+    pub fn by_anchor_given_rotated(
         &self,
         anchor_screenspace: V2,
         anchor_within: V2,
@@ -1223,7 +1331,7 @@ impl Asset {
     }
 }
 
-pub fn load_asset(at: &Path) -> Asset {
+pub fn load_asset(at: &Path, anchor: Option<V2>) -> Asset {
     // pub fn for_asset(at: &std::path::Path) -> Rc<dyn Display> {
     let assetxml = elementtree::Element::from_reader(&std::fs::File::open(at).unwrap()).unwrap();
     //lol, turns out the comment isn't an element so the entire document is just the root element (what if a document contains multiple root elements? Is that not allowed?)
@@ -1253,7 +1361,7 @@ pub fn load_asset(at: &Path) -> Asset {
 
     // let offset = placement_bounds.ul + placement_bounds.span() / 2.0 - (bounds * scale) / 2.0;
 
-    let graphic_str = assume_writes_utf8(|w| {
+    let graphic_str = assume_writes_utf8(|w: &mut dyn Write| {
         graphicel
             .to_writer_with_options(w, WriteOptions::new().set_xml_prolog(None))
             .unwrap()
@@ -1269,6 +1377,7 @@ pub fn load_asset(at: &Path) -> Asset {
             .unwrap();
             },
         ),
+        anchor: anchor.unwrap_or_else(|| bounds / 2.0),
         bounds,
     }
 }
@@ -1278,7 +1387,13 @@ pub struct Assets {
     pub kill: Asset,
     pub negatory: Asset,
     pub level_2: Asset,
+    pub clown: Asset,
     pub guy: Asset,
+    pub guy2: Asset,
+    pub guy2_mage: Asset,
+    pub guy2_flipped: Asset,
+    pub dead_guy2: Asset,
+    pub cubed_guy2: Asset,
     pub guyeye: Asset,
     pub dead_guy: Asset,
     pub altruism: Asset,
@@ -1291,16 +1406,21 @@ pub struct Assets {
     pub tomb: Asset,
     pub void: Asset,
     pub blank: Asset,
+    pub darker_blank: Asset,
     pub come_on_down: Asset,
     pub back_colored_circle: Asset,
     pub step: Asset,
     pub dog_altruism: Asset,
+    pub kill_diamond: Asset,
+    pub double_diamond: Asset,
+    pub end_top_bar: Asset,
 
     pub field_forest: Asset,
     pub mountain_volcano: Asset,
     pub lake_ice: Asset,
     pub tomb_void: Asset,
 
+    //means flip TO field
     pub flip_field: Asset,
     pub flip_forest: Asset,
     pub flip_mountain: Asset,
@@ -1311,99 +1431,119 @@ pub struct Assets {
     pub flip_void: Asset,
 }
 
-fn flip_asset_for(to: &Asset, e: ElementTag) -> Asset {
-    let b = both_dims(FLIP_RINGS_SPAN);
-    Asset {
-        bounds: b,
-        render: Rc::new({
-            let to = to.clone();
-            move |p, s, rotation, w| {
-                flip_rings(
-                    ELEMENT_COLORS_BACK[e],
-                    ELEMENT_COLORS_BACK[opposite_element(e)],
-                    &Displaying(|w| to.by_ul(both_dims(FLIP_RINGS_RAD - BIG_ELEMENT_RAD), 1.0, w)),
-                    // p + both_dims(FLIP_RINGS_RAD),
-                    p + both_dims(FLIP_RINGS_RAD) * s,
-                    s,
-                    rotation,
-                    w,
-                )
-            }
-        }),
-    }
-}
-
 fn generate_either(e1: &Asset, e2: &Asset) -> Asset {
     Asset {
         bounds: e1.bounds,
+        anchor: e1.bounds / 2.0,
         render: Rc::new({
             let e1 = e1.clone();
             let e2 = e2.clone();
             move |p, s, rotation, w| {
                 write!(w, r##"
 <g transform="translate({},{}) scale({s}) rotate({rotation})">
-<defs id="eitherdefs">
+<defs
+     id="eitherdefs">
     <clipPath
        clipPathUnits="userSpaceOnUse"
-       id="clipPath68">
+       id="clipPath1either">
       <path
-         id="path69"
-         style="fill:#e4afaf;fill-opacity:1;stroke-width:9.92476;stroke-linecap:round;stroke-linejoin:round"
-         d="m 2281.1109,7898.2515 v 29.4859 h -26.337 -26.337 v -29.4859 z"
+         id="path3"
+         style="fill:#e4afaf;fill-opacity:1;stroke-width:23.4006;stroke-linecap:round;stroke-linejoin:round"
+         d="M 53.649665,115.74702 H -15.872206 V 53.649629 -8.447763 h 69.521871 z"
          sodipodi:nodetypes="cccccc" />
     </clipPath>
     <clipPath
        clipPathUnits="userSpaceOnUse"
-       id="clipPath67">
+       id="clipPath2either">
       <path
-         id="path68"
-         style="fill:#e4afaf;fill-opacity:1;stroke-width:9.92476;stroke-linecap:round;stroke-linejoin:round"
-         d="m 2079.7215,7898.2515 v 29.4859 h -26.337 -26.337 v -29.4859 z"
+         id="path4"
+         style="fill:#e4afaf;fill-opacity:1;stroke-width:23.4006;stroke-linecap:round;stroke-linejoin:round"
+         d="M 53.649337,115.74699 H 123.17121 V 53.649602 -8.447791 H 53.649337 Z"
          sodipodi:nodetypes="cccccc" />
     </clipPath>
-<g clip-path="url(#clipPath68)">{}</g>
-<g clip-path="url(#clipPath67)">{}</g>
+  </defs>
+<g clip-path="url(#clipPath1either)">{}</g>
+<g clip-path="url(#clipPath2either)">{}</g>
 </g>"##,
                     p.x, p.y,
-                    &Displaying(|w| e1.centered(both_dims(0.0), 1.0, w)),
-                    &Displaying(|w| e2.centered(both_dims(0.0), 1.0, w)),
+                    &Displaying(|w| e1.by_ul(both_dims(0.0), 1.0, w)),
+                    &Displaying(|w| e2.by_ul(both_dims(0.0), 1.0, w)),
                 ).unwrap();
             }
         }),
     }
 }
 
-impl Assets {
-    pub fn load(assets_dir: &Path) -> Self {
-        let kill = load_asset(&Path::new("assets/kill.svg"));
-        let negatory = load_asset(&Path::new("assets/negatory.svg"));
-        let level_2 = load_asset(&Path::new("assets/level_2.svg"));
-        let guy = load_asset(&Path::new("assets/guy.svg"));
-        let guyeye = load_asset(&Path::new("assets/guyeye.svg"));
-        let dead_guy = load_asset(&Path::new("assets/dead_guy.svg"));
-        let altruism = load_asset(&Path::new("assets/altruism.svg"));
-        let field = load_asset(&Path::new("assets/field.svg"));
-        let forest = load_asset(&Path::new("assets/forest.svg"));
-        let mountain = load_asset(&Path::new("assets/mountain.svg"));
-        let volcano = load_asset(&Path::new("assets/volcano.svg"));
-        let lake = load_asset(&Path::new("assets/lake.svg"));
-        let ice = load_asset(&Path::new("assets/ice.svg"));
-        let tomb = load_asset(&Path::new("assets/tomb.svg"));
-        let void = load_asset(&Path::new("assets/void.svg"));
-        let blank = load_asset(&Path::new("assets/blank.svg"));
-        let come_on_down = load_asset(&Path::new("assets/come_on_down.svg"));
-        let back_colored_circle = load_asset(&Path::new("assets/back_colored_circle.svg"));
-        let step = load_asset(&Path::new("assets/step.svg"));
-        let dog_altruism = load_asset(&Path::new("assets/dog_altruism.svg"));
+pub fn horizontal_flip(a: &Asset) -> Asset {
+    let ac = a.clone();
+    Asset {
+        bounds: a.bounds.clone(),
+        anchor: V2::new(a.bounds.x - a.anchor.x, a.anchor.y),
+        render: Rc::new(move |p, scale, angle, w| {
+            write!(
+                w,
+                r##"<g transform="translate({},{}) scale({}) rotate({}) matrix(-1,0,0,1,{},0)">"##,
+                p.x, p.y, scale, angle, ac.bounds.x,
+            )
+            .unwrap();
+            (ac.render)(V2::new(0.0, 0.0), 1.0, 0.0, w);
+            write!(w, "</g>").unwrap();
+        }),
+    }
+}
 
-        let flip_field = flip_asset_for(&field, FIELD_I);
-        let flip_forest = flip_asset_for(&forest, FOREST_I);
-        let flip_mountain = flip_asset_for(&mountain, MOUNTAIN_I);
-        let flip_volcano = flip_asset_for(&volcano, VOLCANO_I);
-        let flip_lake = flip_asset_for(&lake, LAKE_I);
-        let flip_ice = flip_asset_for(&ice, ICE_I);
-        let flip_tomb = flip_asset_for(&tomb, TOMB_I);
-        let flip_void = flip_asset_for(&void, VOID_I);
+impl Assets {
+    pub fn load(_assets_dir: &Path) -> Self {
+        let kill = load_asset(&Path::new("assets/kill.svg"), None);
+        let negatory = load_asset(&Path::new("assets/negatory_shadowed.svg"), None);
+        let level_2 = load_asset(&Path::new("assets/level_22.svg"), None);
+        let clown = load_asset(&Path::new("assets/clown.svg"), None);
+        let guy = load_asset(&Path::new("assets/guy.svg"), None);
+        let guyeye = load_asset(&Path::new("assets/guyeye.svg"), None);
+        let dead_guy = load_asset(&Path::new("assets/dead_guy.svg"), None);
+        let altruism = load_asset(&Path::new("assets/altruism.svg"), None);
+        let field = load_asset(&Path::new("assets/field.svg"), None);
+        let forest = load_asset(&Path::new("assets/forest.svg"), None);
+        let mountain = load_asset(&Path::new("assets/mountain.svg"), None);
+        let volcano = load_asset(&Path::new("assets/volcano.svg"), None);
+        let lake = load_asset(&Path::new("assets/lake.svg"), None);
+        let ice = load_asset(&Path::new("assets/ice.svg"), None);
+        let tomb = load_asset(&Path::new("assets/tomb.svg"), None);
+        let void = load_asset(&Path::new("assets/void.svg"), None);
+        let blank = load_asset(&Path::new("assets/blank.svg"), None);
+        let darker_blank = load_asset(&Path::new("assets/darker_blank.svg"), None);
+        let come_on_down = load_asset(&Path::new("assets/come_on_down.svg"), None);
+        let back_colored_circle = load_asset(&Path::new("assets/back_colored_circle.svg"), None);
+        let end_top_bar = load_asset(&Path::new("assets/end_top_bar.svg"), None);
+        // let step = load_asset(&Path::new("assets/step.svg"), None);
+        let step = load_asset(&Path::new("assets/step2.svg"), None);
+        let dog_altruism = load_asset(&Path::new("assets/dog_altruism.svg"), None);
+        // let guy2 = load_asset(&Path::new("assets/guy2.svg"), None);
+        let guy2 = load_asset(&Path::new("assets/guy2_flat.svg"), Some(GUY2_ANCHOR));
+        // let guy2_mage = load_asset(&Path::new("assets/guy2_mage.svg"), None);
+        // let guy2_mage = load_asset(&Path::new("assets/guy2_mage_mad.svg"), Some(GUY2_RISEN_ANCHOR));
+        // let guy2_mage = load_asset(&Path::new("assets/guy2_mage_filled.svg"), Some(GUY2_MAGE_ANCHOR));
+        let guy2_mage = load_asset(
+            &Path::new("assets/guy2_mage_flat.svg"),
+            Some(V2::new(37.347, 82.709)),
+        );
+        let dead_guy2 = load_asset(&Path::new("assets/dead_guy2.svg"), Some(GUY2_DEAD_ANCHOR));
+        let cubed_guy2 = load_asset(
+            &Path::new("assets/cubed guy2.svg"),
+            Some(V2::new(27.316, 80.938)),
+        );
+        let kill_diamond = load_asset(&Path::new("assets/kill_diamond.svg"), None);
+        let double_diamond = load_asset(&Path::new("assets/double_diamond.svg"), None);
+
+        let guy2_flipped = horizontal_flip(&guy2);
+        let flip_field = element_flip(&forest, &field);
+        let flip_forest = element_flip(&field, &forest);
+        let flip_mountain = element_flip(&volcano, &mountain);
+        let flip_volcano = element_flip(&mountain, &volcano);
+        let flip_lake = element_flip(&ice, &lake);
+        let flip_ice = element_flip(&lake, &ice);
+        let flip_tomb = element_flip(&void, &tomb);
+        let flip_void = element_flip(&tomb, &void);
 
         let field_forest = generate_either(&field, &forest);
         let mountain_volcano = generate_either(&mountain, &volcano);
@@ -1414,21 +1554,30 @@ impl Assets {
             kill,
             negatory,
             level_2,
+            clown,
             guy,
+            guy2,
+            guy2_mage,
+            guy2_flipped,
+            dead_guy2,
             guyeye,
             dead_guy,
             altruism,
+            darker_blank,
             field,
             forest,
             mountain,
             volcano,
             lake,
+            double_diamond,
+            cubed_guy2,
             ice,
             tomb,
             void,
             blank,
             come_on_down,
             back_colored_circle,
+            end_top_bar,
             step,
             dog_altruism,
             flip_field,
@@ -1443,6 +1592,7 @@ impl Assets {
             mountain_volcano,
             lake_ice,
             tomb_void,
+            kill_diamond,
         }
     }
     pub fn element(&self, e: ElementTag) -> &Asset {
@@ -1472,6 +1622,7 @@ impl Assets {
     }
     pub fn flip_to(&self, e: ElementTag) -> &Asset {
         match e {
+            //means flip TO field
             FIELD_I => &self.flip_field,
             FOREST_I => &self.flip_forest,
             LAKE_I => &self.flip_lake,
@@ -1485,12 +1636,6 @@ impl Assets {
     }
 }
 
-pub fn for_asset(at: PathBuf) -> Displaying<impl Fn(&mut dyn Write)> {
-    Displaying(move |w: &mut dyn Write| {
-        load_asset(&at).center_in_bounds(end_graphic_usual_bounds(), w)
-    })
-}
-
 //end ends stuff, begin means
 
 pub fn means_backing(
@@ -1499,13 +1644,13 @@ pub fn means_backing(
     to: &mut dyn Write,
     description: &str,
     level: usize,
+    clown: bool,
 ) {
-    backing(assets, inserting, to, description, level);
+    backing(assets, inserting, to, description, level, clown, false);
 }
 
 pub fn guylike(asset: &Asset, base_centered: V2, scale: f64, to: &mut dyn Write) {
-    let bx = asset.bounds.x / 2.0;
-    asset.by_anchor(base_centered, V2::new(bx, asset.bounds.y - bx), scale, to);
+    asset.by_anchor(base_centered, scale, to);
 }
 
 pub fn blank_front(inserting: &impl Display, color: &str, rotate: bool, to: &mut dyn Write) {
@@ -1680,11 +1825,11 @@ pub fn dual_color_patch(
     let color_left = ELEMENT_COLORS_BACK[e1];
     let color_right = ELEMENT_COLORS_BACK[e2];
     let splat_span = V2::new(205.18423, 224.67136);
-    let scale = bounds.span().component_div(&splat_span).min() * 0.78;
+    let scale = bounds.span().component_div(&splat_span).min() * 0.82;
     let offset = bounds.center() - scale * splat_span / 2.0;
-    let (c1, c2) = tilted_pair(splat_span / 2.0, splat_span.x * 0.17);
-    let e1d = Displaying(|w| assets.element(e1).by_grav(c1, MIDDLE_MIDDLE, 0.6, w));
-    let e2d = Displaying(|w| assets.element(e2).by_grav(c2, MIDDLE_MIDDLE, 0.6, w));
+    let (c1, c2) = tilted_pair(splat_span / 2.0, splat_span.x * 0.21);
+    let e1d = Displaying(|w| assets.element(e1).by_grav(c1, MIDDLE_MIDDLE, 0.8, w));
+    let e2d = Displaying(|w| assets.element(e2).by_grav(c2, MIDDLE_MIDDLE, 0.8, w));
 
     write!(
         w,
@@ -1822,3 +1967,253 @@ pub fn do_sheet(span: V2, inserting: &impl Display, to: &mut dyn Write) {
     )
     .unwrap();
 }
+
+fn element_flip(from: &Asset, to: &Asset) -> Asset {
+    Asset {
+        bounds: BIG_ELEMENT_DIMENSIONS,
+        anchor: BIG_ELEMENT_DIMENSIONS / 2.0,
+        render: Rc::new({
+            let to = to.clone();
+            let from = from.clone();
+            move |p, s, _rotation, w| {
+                // flip_rings(
+                //     ELEMENT_COLORS_BACK[e],
+                //     ELEMENT_COLORS_BACK[opposite_element(e)],
+                //     &Displaying(|w| to.by_ul(both_dims(FLIP_RINGS_RAD - BIG_ELEMENT_RAD), 1.0, w)),
+                //     // p + both_dims(FLIP_RINGS_RAD),
+                //     p + both_dims(FLIP_RINGS_RAD) * s,
+                //     s,
+                //     rotation,
+                //     w,
+                // );
+
+                write!(
+                    w,
+                    r##"
+<g transform="translate({},{}) scale({s})">
+<defs
+     id="defs1">
+    <clipPath
+       clipPathUnits="userSpaceOnUse"
+       id="clipPath3">
+      <path
+         id="path4"
+         style="fill:#c3c3c3;fill-opacity:0.988235;stroke-width:2.20738;stroke-linecap:round;stroke-linejoin:round"
+         d="M 122.01824,74.762596 V 162.01159 H 53.649337 -14.719569 V 74.762596 Z"
+         sodipodi:nodetypes="cccccc" />
+    </clipPath>
+    <clipPath
+       clipPathUnits="userSpaceOnUse"
+       id="clipPath4">
+      <path
+         id="path5"
+         style="fill:#c3c3c3;fill-opacity:0.988235;stroke-width:2.20738;stroke-linecap:round;stroke-linejoin:round"
+         d="M -14.719569,-12.486369 H 53.649337 122.01824 V 74.762625 H -14.719569 Z"
+         sodipodi:nodetypes="cccccc" />
+    </clipPath>
+  </defs>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(3.5032504e-4,-4.5292512e-5)">
+    <g
+       id="g4"
+       clip-path="url(#clipPath4)">
+      {}
+    </g>
+    <g
+       id="g3"
+       clip-path="url(#clipPath3)">
+      {}
+    </g>
+  </g>
+</g>
+                    "##,
+                    p.x, p.y,
+                    &Displaying(|w| to.by_ul(V2::new(0.0, 0.0), 1.0, w)),
+                    &Displaying(|w| from.by_ul(V2::new(0.0, 0.0), 1.0, w)),
+                ).unwrap();
+            }
+        }),
+    }
+}
+
+pub fn guy2_mage(assets: &Rc<Assets>, c: V2, scale: f64, w: &mut dyn Write) {
+    assets.guy2_mage.by_anchor(c, scale, w);
+}
+
+pub fn guy2_dead(assets: &Rc<Assets>, c: V2, scale: f64, w: &mut dyn Write) {
+    assets.dead_guy2.by_anchor(c, scale, w);
+}
+
+pub fn guy2(assets: &Rc<Assets>, c: V2, scale: f64, w: &mut dyn Write) {
+    assets.guy2.by_anchor(c, scale, w);
+}
+
+pub fn guy2_flipped(assets: &Rc<Assets>, c: V2, scale: f64, w: &mut dyn Write) {
+    assets.guy2_flipped.by_anchor(c, scale, w);
+}
+
+// I was going to use constraint satisfication, but I think these constraints are all just ratios
+pub struct FinalGenConf {
+    pub total_preferred_count: usize,
+    pub tomb_prefering_cards: f64,
+    pub void_prefering_cards: f64,
+    pub water_movement_cards: f64,
+    pub kill_cards_for_void_volcano: f64,
+    pub kill_cards_for_field: f64,
+    pub kill_cards_for_tombs: f64,
+    pub kill_cards_for_mountain: f64,
+    pub water_ice_changing_cards: f64,
+    pub cards_that_make_voids: f64,
+    pub cards_that_make_tombs: f64,
+}
+impl Default for FinalGenConf {
+    fn default() -> Self {
+        Self {
+            total_preferred_count: 280,
+            tomb_prefering_cards: 1.5,
+            void_prefering_cards: 0.07,
+            water_movement_cards: 3.2,
+            kill_cards_for_void_volcano: 3.8,
+            kill_cards_for_field: 0.9,
+            kill_cards_for_tombs: 0.1,
+            kill_cards_for_mountain: 0.2,
+            water_ice_changing_cards: 3.0,
+            cards_that_make_voids: 2.6,
+            cards_that_make_tombs: 0.7,
+        }
+    }
+}
+impl FinalGenConf {
+    pub fn identity() -> Self {
+        Self {
+            total_preferred_count: 0,
+            tomb_prefering_cards: 1.0,
+            void_prefering_cards: 1.0,
+            water_movement_cards: 1.0,
+            kill_cards_for_void_volcano: 1.0,
+            kill_cards_for_field: 1.0,
+            kill_cards_for_tombs: 1.0,
+            kill_cards_for_mountain: 1.0,
+            water_ice_changing_cards: 1.0,
+            cards_that_make_voids: 1.0,
+            cards_that_make_tombs: 1.0,
+        }
+    }
+}
+// considering winnowing down according to constraints
+// deprecated, remove, committing for posterity:
+// this was a waste of time. I should just generate all specs then file them down until the ratios are close to right.
+// // not efficient at all, not sure there's a particularly clever or efficient way of doing this, the core operation fundamentally is to reject a lot of the base distribution
+// fn weighted_sampler<T, I: Iterator<Item=(usize, T)>>(mut i:I, mut rng:impl Rng, buffer_max_size: usize, window_preferred_total_weight: usize)-> impl Iterator<Item=T> {
+//     from_coroutine(move ||{
+//         // initially I hoped that I could recycle elements that weren't picked previously, but for a reasonable constraint on buffer size, this just lead to the output distribution equalling the input distribution. Which I feel like I should, in some sense, have predicted.
+
+//         //fill a buffer that should be representative of the desired distribution
+//         let mut buffer = Vec::with_capacity(buffer_max_size);
+//         loop {
+//             let mut buffer_fullness = 0;
+//             while buffer.len() < buffer_max_size && buffer_fullness < window_preferred_total_weight {
+//                 if let Some(n) = i.next() {
+//                     buffer_fullness += n.0;
+//                     buffer.push(n);
+//                 }else{
+//                     return;
+//                 }
+//             }
+//             if buffer.len() == 0 {
+//                 return;
+//             }
+//             //find and pick the item at a random offset, then throw all the other items away
+//             let r:f64 = rng.gen::<f64>()*(buffer_fullness as f64);
+//             let mut i = 0;
+//             let mut acc = 0;
+//             loop {
+//                 acc += buffer[i].0;
+//                 if acc as f64 >= r {
+//                     let v = buffer.remove(i);
+//                     buffer.clear();
+//                     yield v.1;
+//                     break;
+//                 }
+//                 i += 1;
+//             }
+//         }
+//     })
+// }
+// fn rotate_push<T>(to: &mut VecDeque<T>, v:T)-> Option<T> {
+//     assert!(to.capacity() != 0, "this method uses the capacity of the vecdeque to decide when to start wrapping, so capacity isn't allowed to be zero");
+//     if to.len() == to.capacity() {
+//         let ret = Some(replace(to[0], v));
+//         to.rotate_left(1);
+//         ret
+//     }else{
+//         to.push(v);
+//         None
+//     }
+// }
+// /// total_weight_estimate is an estimate of the sums of the distinct weights that would come up, which is used to increase accuracy of early draws from an incomplete histogram
+// fn bucketed_weighted_sampler<T, I: Iterator<Item=(usize, T)>>(mut i:I, mut rng:impl Rng, total_weight_estimate: usize)-> impl Iterator<Item=T> where T:Default {
+//     from_coroutine(move ||{
+//         //works by keeping a buffer of the last buffer_len seen items
+//         let buffer_len = 7;
+//         //fill a buffer that should be representative of the desired distribution
+//         let mut weight_class_total = 0;
+//         let mut histogram: BTreeMap<usize, VecDeque<T>> = BTreeMap::new();
+//         let draw_entry = |i, histogram, weight_class_total|{
+//             let i = i.next();
+//             histogram.entry(w).or_insert(|| {
+//                 weight_class_total += w;
+//                 VecDeque::with_capacity(buffer_len)
+//             }).and_modify(|s| {
+//                 push_rotate(s, v);
+//             });
+//         };
+//         for _ in 0..buffer_len*buffer_len { //a pretty arbitrary number
+//             draw_entry(&mut i, &mut histogram, &mut weight_class_total);
+//         }
+//         for (w, v) in i {
+//             //restore one for every one you yield
+//             draw_entry(&mut i, &mut histogram, &mut weight_class_total);
+//             let estimated_total_weight = weight_class_total.max(total_weight_estimate);
+//             let r:f64 = rng.gen::<f64>()*estimated_total_weight as f64;
+//             let mut i = 0;
+//             let mut acc = 0;
+//             for &(ref w, ref v) in histogram.iter() {
+//                 acc += w;
+//                 if acc as f64 > r {
+
+//                 }
+//             }
+//             loop {
+//                 acc += histogram[i].0;
+//                 if acc as f64 >= r {
+//                     let v = buffer.remove(i);
+//                     buffer.clear();
+//                     yield v.1;
+//                     break;
+//                 }
+//                 i += 1;
+//             }
+//         }
+//     })
+// }
+// #[cfg(test)]
+// mod test {
+//     use super::*;
+//     #[test]
+//     fn test_weighted_sampling() {
+//         //testing on a distribution where odd numbers should come up 1/6 times as often
+//         //lmao they don't, windowed_sampler method does not work at all
+//         let total = 2000;
+//         let ratio = 6;
+//         let rng = rand::rngs::StdRng::seed_from_u64(38948);
+//         let counted = weighted_sampler((0..).map(|i| if (i%2) == 1 { (1, i) } else { (ratio, i) }), rng, 50, 200 ).take(total).filter(|i| i % 2 == 1).count();
+//         let expected = 1.0/(1 + ratio) as f64;
+//         let got = counted as f64/total as f64;
+//         println!("expected {}, got {}", expected, got);
+//         assert!(expected - 0.05 < got && expected + 0.05 > got);
+//     }
+// }
