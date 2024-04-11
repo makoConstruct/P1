@@ -32,8 +32,6 @@ pub fn weighted_draws<T>(
     to: &mut Vec<T>,
     rng: &mut impl Rng,
 ) {
-    const INTERVAL: usize = 16;
-    const MAX_DRAWS: usize = 128;
     let mut quota = from.len().min(removing);
     let mut draws = Vec::with_capacity(quota);
     let mut total_weight: f64 = from.iter().map(|t| t.weight()).sum();

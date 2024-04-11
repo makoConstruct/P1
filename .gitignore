@@ -9,3 +9,11 @@ Cargo.lock
 P1_manual.html
 P1manual.svg
 todo.md
+final_means_svgs/*
+final_ends_svgs/*
+final_land_svgs/*
+final_means_pngs/*
+final_ends_pngs/*
+final_land_pngs/*
+final_surplus_land_svgs/*
+final_surplus_land_pngs/*
