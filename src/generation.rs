@@ -148,7 +148,7 @@ pub fn end_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
         })),
     });
 
-    specs.push(CardGen { min_count: 8, desired_proportion: 0.0, generator: Box::new(each_unordered_nonequal_triple().into_map({
+    specs.push(CardGen { min_count: 4, desired_proportion: 0.0, generator: Box::new(each_unordered_nonequal_triple().into_map({
         let all_assets = all_assets.clone();
         move |(e1, eroad, e3)| {
             let tilt = -TAU / 24.0;
@@ -168,20 +168,12 @@ pub fn end_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                     ELEMENT_NAMES[e1], ELEMENT_NAMES[eroad], ELEMENT_NAMES[e3]
                 ),
                 Rc::new(Displaying({let all_assets = all_assets.clone(); move |w| {
-                    let bounds = end_graphic_usual_bounds();
-                    big_splat_scaled(ELEMENT_COLORS_BACK[eroad], 0.38, w);
-                    let c = bounds.center();
-                    let sd = bounds.span().min();
-                    let er = sd*0.16;
-                    all_assets.element(eroad).centered_rad(c, er, w);
-                    let a = from_angle_mag(-TAU/12.0, sd*0.32);
-                    all_assets.element(e3).centered_rad(c + a, er, w);
-                    all_assets.element(e1).centered_rad(c - a, er, w);
+                    let bounds = end_graphic_usual_bounds_shrunk_appropriately();
+                    road_blob_rad(&all_assets, e1, e3, eroad, bounds, w);
                 }})),
                 format!("{}", &scores),1,
                 format!(
-                    "{} point for every pair of {e1n} and {e3n} connected by a patch of {eroadn}. In other words, for all {e1n} and {e3n} on the banks of a clump of {eroadn}, score the number of {e1n} multiplied by the number of {e3n}",
-                    &scores,
+                    "for all {e1n} and {e3n} on the banks of a clump of {eroadn}, score the number of {e1n} multiplied by the number of {e3n}"
                 ),
                 vec![e1,eroad,e3],
                 2,
@@ -1201,7 +1193,8 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
     r
 }
 
-pub fn land_specs(assets: &Rc<Assets>) -> Vec<CardGen> {
+pub fn land_specs(assets: &Rc<Assets>, repeating: &[u8]) -> Vec<CardGen> {
+    assert_eq!(repeating.len(), 4);
     let mut r: Vec<CardGen> = Vec::new();
     fn side(assets: Rc<Assets>, e: ElementTag) -> Rc<impl Fn(&mut dyn Write)> {
         let scale = CARD_DIMENSIONS.min() / 2.0 / BIG_ELEMENT_RAD * 0.945;
@@ -1222,9 +1215,10 @@ pub fn land_specs(assets: &Rc<Assets>) -> Vec<CardGen> {
         desired_proportion: 0.0,
         generator: Box::new(element_primaries().into_map({
             let assets = assets.clone();
+            let repeatings = Vec::from(repeating);
             move |(e, eo)| CardSpec {
                 name: format!("land_{}_{}", ELEMENT_NAMES[e], ELEMENT_NAMES[eo]),
-                repeat: 1,
+                repeat: repeatings[e/2] as usize,
                 level: 1,
                 frequency_modifier: 1.0,
                 properties: vec![],

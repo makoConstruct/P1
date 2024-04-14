@@ -21,6 +21,10 @@ pub fn rotate(rotation: V2, v: V2) -> V2 {
 pub fn both_dims(v: f64) -> V2 {
     V2::new(v, v)
 }
+/// scale_fit(a, b)*a fits within b
+pub fn scale_fit(v:V2, bounds:V2)-> f64 {
+    (bounds.x.abs()/v.x.abs()).min(bounds.y.abs()/v.y.abs())
+}
 
 pub struct Displaying<F: Fn(&mut dyn Write)>(pub F);
 impl<F> Display for Displaying<F>
@@ -777,8 +781,8 @@ pub fn backing(
     is_end: bool,
 ) {
     let span = CARD_DIMENSIONS.x;
-    let marker_rad = span * 0.12;
-    let sep = span * 0.03;
+    let marker_rad = span * 0.1;
+    let sep = span * 0.017;
     let level_marker = Displaying(|w| {
         let mut offset = 0.0;
         if level >= 2 {
@@ -950,6 +954,42 @@ pub fn big_splat_scaled(color: &str, scale: f64, to: &mut dyn Write) {
         offset.x, offset.y
     ).unwrap()
 }
+
+pub fn road_blob_rad(assets:&Assets, e1:ElementTag, e2:ElementTag, road:ElementTag, bounds:Rect, to: &mut dyn Write) {
+    let center = bounds.center();
+    let unscaled_anchor = V2::new(53.649,53.649);
+    let unscaled_rad = unscaled_anchor.x;
+    let unscaled_span = V2::new(167.936, 212.7457);
+    // to understand this code, understand that inner_span is the sort fo skeleton of the road blob
+    let inner_span = V2::new(unscaled_span.x - 2.0*unscaled_rad, unscaled_span.y - 2.0*unscaled_rad);
+    let to_corner_element_center = V2::new(inner_span.x*1.5, -inner_span.y/2.0);
+    let unscaled_total_radii = to_corner_element_center + both_dims(unscaled_rad);
+    let scale = scale_fit(unscaled_total_radii, bounds.span()/2.0);
+    let e1c = unscaled_span/2.0 - to_corner_element_center;
+    let e2c = unscaled_span/2.0 + to_corner_element_center;
+    let rc = unscaled_span/2.0 - inner_span/2.0;
+    let offset = center - scale*unscaled_span/2.0;
+    let color = ELEMENT_COLORS_BACK[road];
+    write!(to,
+        r##"<g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     transform="translate({},{}) scale({scale})"
+     id="layer1">
+    <path
+       id="rect2665"
+       style="fill:#{color};fill-opacity:1;stroke-width:1.48762;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:0.20634"
+       d="M 53.65,0 C 24.020028,-2.1815337e-4 5.7989317e-5,24.019528 0,53.6495 0.05652097,73.170544 10.711886,91.120299 29.332876,102.32605 47.953866,113.5318 60.310565,135.27891 60.433,158.7867 h 0.2253 c -0.0076,0.10318 -0.01496,0.20638 -0.022,0.3096 1.13e-4,29.62993 24.020067,53.64962 53.65,53.6494 29.6297,-1.1e-4 53.64929,-24.0197 53.6494,-53.6494 -9.2e-4,-18.88963 -9.93573,-36.38688 -28.56906,-47.67054 C 120.73331,100.14209 107.65591,77.905508 107.5011,53.7378 h -0.2077 l 0.01,-0.088 C 107.30334,24.020062 83.283738,4.1321785e-4 53.654,3e-4 Z"
+       sodipodi:nodetypes="cccccccccccccc" />
+    "##,
+        offset.x, offset.y
+    ).unwrap();
+    assets.element(e1).centered_rad(e1c, unscaled_rad, to);
+    assets.element(e2).centered_rad(e2c, unscaled_rad, to);
+    assets.element(road).centered_rad(rc, unscaled_rad, to);
+    write!(to, r##"</g>"##).unwrap();
+}
+
 
 pub fn negatory(to: &mut dyn Write) {
     // let scale = 0.54;
@@ -1414,6 +1454,7 @@ pub struct Assets {
     pub kill_diamond: Asset,
     pub double_diamond: Asset,
     pub end_top_bar: Asset,
+    pub road_blob: Asset,
 
     pub field_forest: Asset,
     pub mountain_volcano: Asset,
@@ -1534,6 +1575,7 @@ impl Assets {
         );
         let kill_diamond = load_asset(&Path::new("assets/kill_diamond.svg"), None);
         let double_diamond = load_asset(&Path::new("assets/double_diamond.svg"), None);
+        let road_blob = load_asset(Path::new("assets/road_blob.svg"), Some(V2::new(53.649,53.649)));
 
         let guy2_flipped = horizontal_flip(&guy2);
         let flip_field = element_flip(&forest, &field);
@@ -1578,6 +1620,7 @@ impl Assets {
             come_on_down,
             back_colored_circle,
             end_top_bar,
+            road_blob,
             step,
             dog_altruism,
             flip_field,
@@ -2068,6 +2111,10 @@ pub struct FinalGenConf {
     pub water_ice_changing_cards: f64,
     pub cards_that_make_voids: f64,
     pub cards_that_make_tombs: f64,
+    pub land_counts: Vec<u8>,
+    pub land_surplus_counts: Vec<u8>,
+    pub gen_svgs: bool,
+    pub gen_pngs: bool,
 }
 impl Default for FinalGenConf {
     fn default() -> Self {
@@ -2083,23 +2130,10 @@ impl Default for FinalGenConf {
             water_ice_changing_cards: 3.0,
             cards_that_make_voids: 2.6,
             cards_that_make_tombs: 0.7,
-        }
-    }
-}
-impl FinalGenConf {
-    pub fn identity() -> Self {
-        Self {
-            total_preferred_count: 0,
-            tomb_prefering_cards: 1.0,
-            void_prefering_cards: 1.0,
-            water_movement_cards: 1.0,
-            kill_cards_for_void_volcano: 1.0,
-            kill_cards_for_field: 1.0,
-            kill_cards_for_tombs: 1.0,
-            kill_cards_for_mountain: 1.0,
-            water_ice_changing_cards: 1.0,
-            cards_that_make_voids: 1.0,
-            cards_that_make_tombs: 1.0,
+            land_counts: vec![15, 8, 7, 7],
+            land_surplus_counts: vec![6, 6, 6, 6],
+            gen_svgs: true,
+            gen_pngs: false,
         }
     }
 }
