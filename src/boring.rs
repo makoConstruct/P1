@@ -682,10 +682,7 @@ impl CardSpec {
                 let front_inner = rcd.clone();
                 Rc::new(move |w| {
                     let scc = sc.clone();
-                    end_front_outer(
-                        &Displaying(|w| end_front_inner(&front_inner, scc.clone(), w)),
-                        w,
-                    );
+                    end_front_inner(&front_inner, scc.clone(), w);
                 })
             },
             generate_back: Rc::new({
@@ -702,23 +699,29 @@ impl CardSpec {
     }
 }
 
-pub fn end_front(inserting: &impl Display, scores: String, to: &mut dyn Write) {
-    end_front_outer(
-        &Displaying(move |w: &mut dyn Write| end_front_inner(inserting, scores.clone(), w)),
-        to,
-    );
-}
 
-pub fn end_front_outer(inserting: &impl Display, to: &mut dyn Write) {
-    front_outer(inserting, to);
-}
-pub fn means_front_outer(inserting: &impl Display, to: &mut dyn Write) {
-    front_outer(inserting, to);
-}
-pub fn front_outer(inserting: &impl Display, to: &mut dyn Write) {
+pub fn svg_outer(cut_clip:bool, inserting: &impl Display, to: &mut dyn Write) {
+    let (clipper, clip_filter) = if cut_clip {
+    (
+        r##"<clipPath
+    clipPathUnits="userSpaceOnUse"
+    id="cardcut">
+    <path
+        fill="#ffffff"
+        stroke="#ec1e28"
+        stroke-width="0.374174"
+        d="M 138.9062,208.35959 H 19.8437 c -5.4799,0 -9.9220999,-4.4417 -9.9220999,-9.9219 V 19.844 c 0,-5.4802 4.4421999,-9.9219001 9.9220999,-9.9219001 h 119.0625 c 5.48,0 9.9218,4.4417001 9.9218,9.9219001 v 178.59369 c 0,5.4802 -4.4418,9.9219 -9.9218,9.9219 z"
+        id="path23"
+        style="fill:#f1f2f2;fill-opacity:1;stroke:none" />
+</clipPath>"##,
+        r##"clip-path="url(#cardcut)""##,
+    )
+} else {
+    ("", "")
+};
     write!(
         to,
-        r##"<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+r##"<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!-- Created partially with Inkscape (http://www.inkscape.org/) but primarily through codegen -->
 
 <svg
@@ -752,14 +755,18 @@ pub fn front_outer(inserting: &impl Display, to: &mut dyn Write) {
      inkscape:window-y="0"
      inkscape:window-maximized="1"
      inkscape:current-layer="layer1" />
-  <defs
-     id="defs1" />
-  {inserting}
+  <defs id="defs_clip">
+  {clipper}
+  </defs>
+    <g {clip_filter}>
+        {inserting}
+    </g>
 </svg>
 "##,
     )
     .unwrap();
 }
+
 
 pub fn end_backing(
     assets: &Rc<Assets>,
@@ -812,41 +819,7 @@ pub fn backing(
         }
     });
     write!(to,
-r##"<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<!-- Created partially with Inkscape (http://www.inkscape.org/) but primarily through codegen -->
-
-<svg
-   width="158.75mm"
-   height="218.28127mm"
-   viewBox="0 0 158.75 218.28127"
-   version="1.1"
-   id="svg1"
-   inkscape:version="1.3.1 (91b66b0783, 2023-11-16)"
-   sodipodi:docname="card front template.svg"
-   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
-   xmlns="http://www.w3.org/2000/svg"
-   xmlns:svg="http://www.w3.org/2000/svg">
-  <sodipodi:namedview
-     id="namedview1"
-     pagecolor="#ffffff"
-     bordercolor="#000000"
-     borderopacity="0.25"
-     inkscape:showpageshadow="2"
-     inkscape:pageopacity="0.0"
-     inkscape:pagecheckerboard="0"
-     inkscape:deskcolor="#d1d1d1"
-     inkscape:document-units="mm"
-     inkscape:zoom="0.64462111"
-     inkscape:cx="197.79061"
-     inkscape:cy="62.827604"
-     inkscape:window-width="1876"
-     inkscape:window-height="1032"
-     inkscape:window-x="44"
-     inkscape:window-y="0"
-     inkscape:window-maximized="1"
-     inkscape:current-layer="layer1" />
-  <defs
+r##"  <defs
      id="defs1">
     <rect
        x="73.083376"
@@ -895,7 +868,6 @@ r##"<?xml version="1.0" encoding="UTF-8" standalone="no"?>
            style="font-weight:normal;font-family:Rubik;-inkscape-font-specification:Rubik"
            id="tspan2">{description}</tspan></tspan></text>
   </g>
-</svg>
 "##,
     ).unwrap();
 }
@@ -1454,7 +1426,6 @@ pub struct Assets {
     pub kill_diamond: Asset,
     pub double_diamond: Asset,
     pub end_top_bar: Asset,
-    pub road_blob: Asset,
 
     pub field_forest: Asset,
     pub mountain_volcano: Asset,
@@ -1575,7 +1546,6 @@ impl Assets {
         );
         let kill_diamond = load_asset(&Path::new("assets/kill_diamond.svg"), None);
         let double_diamond = load_asset(&Path::new("assets/double_diamond.svg"), None);
-        let road_blob = load_asset(Path::new("assets/road_blob.svg"), Some(V2::new(53.649,53.649)));
 
         let guy2_flipped = horizontal_flip(&guy2);
         let flip_field = element_flip(&forest, &field);
@@ -1620,7 +1590,6 @@ impl Assets {
             come_on_down,
             back_colored_circle,
             end_top_bar,
-            road_blob,
             step,
             dog_altruism,
             flip_field,
@@ -1711,40 +1680,7 @@ pub fn card_front_outer(
     to: &mut dyn Write,
 ) {
     let rotation = if rotate { "90" } else { "0" };
-    write!(to, r##"<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<!-- Created partially with Inkscape (http://www.inkscape.org/) but primarily through codegen -->
-
-<svg
-   width="158.75mm"
-   height="218.28127mm"
-   viewBox="0 0 158.75 218.28127"
-   version="1.1"
-   id="svg1"
-   inkscape:version="1.3.1 (91b66b0783, 2023-11-16)"
-   sodipodi:docname="means front template.svg"
-   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
-   xmlns="http://www.w3.org/2000/svg"
-   xmlns:svg="http://www.w3.org/2000/svg">
-  <sodipodi:namedview
-     id="namedview1"
-     pagecolor="#ffffff"
-     bordercolor="#000000"
-     borderopacity="0.25"
-     inkscape:showpageshadow="2"
-     inkscape:pageopacity="0.0"
-     inkscape:pagecheckerboard="0"
-     inkscape:deskcolor="#d1d1d1"
-     inkscape:document-units="mm"
-     inkscape:zoom="0.49829275"
-     inkscape:cx="60.205571"
-     inkscape:cy="601.05229"
-     inkscape:window-width="1876"
-     inkscape:window-height="1032"
-     inkscape:window-x="44"
-     inkscape:window-y="0"
-     inkscape:window-maximized="1"
-     inkscape:current-layer="g8" />
+    write!(to, r##"
   <defs
      id="defs1">
     <rect
@@ -1798,8 +1734,7 @@ pub fn card_front_outer(
          x="84.767989"
          y="722.40316"
          id="tspan3">{name}</tspan></text>
-  </g>
-</svg>"##).unwrap();
+  </g>"##).unwrap();
 }
 
 pub fn flip_rings(

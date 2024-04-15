@@ -35,11 +35,22 @@ where
     }
 }
 
+use weighted_sampling::Weighted;
+impl Weighted<CardSpec> for CardSpec {
+    fn weight(&self) -> f64 {
+        self.frequency_modifier
+    }
+    fn transmit(self) -> CardSpec {
+        self
+    }
+}
+
 struct Conf {
     seed: u64,
     gen_count: usize,
     gen_front: bool,
     gen_back: bool,
+    cut_clip: bool,
     final_gen: Option<Box<FinalGenConf>>,
     output: String,
 }
@@ -50,6 +61,7 @@ impl Default for Conf {
             gen_count: 1,
             gen_front: true,
             gen_back: true,
+            cut_clip: false,
             final_gen: None,
             output: "generated_card_svgs".to_string(),
         }
@@ -75,16 +87,26 @@ fn gen_cards(assets: &Rc<Assets>, conf: &Conf) {
 
     fn write_spec(spec: &CardSpec, conf: &Conf, output_dir: &Path) {
         if conf.gen_front {
-            (spec.generate_front)(
-                &mut File::create(
-                    output_dir.join(&format!("{}[face,{}].svg", &spec.name, spec.repeat)),
-                )
-                .unwrap(),
+            let mut w =
+                File::create(output_dir.join(&format!("{}[face,{}].svg", &spec.name, spec.repeat)))
+                    .unwrap();
+            svg_outer(
+                conf.cut_clip,
+                &Displaying(|w| {
+                    (spec.generate_front)(w);
+                }),
+                &mut w,
             );
         }
         if conf.gen_back {
-            (spec.generate_back)(
-                &mut File::create(output_dir.join(&format!("{}[back].svg", &spec.name))).unwrap(),
+            let mut w =
+                File::create(output_dir.join(&format!("{}[back].svg", &spec.name))).unwrap();
+            svg_outer(
+                conf.cut_clip,
+                &Displaying(|w| {
+                    (spec.generate_back)(w);
+                }),
+                &mut w,
             );
         }
     }
@@ -145,15 +167,6 @@ fn gen_cards(assets: &Rc<Assets>, conf: &Conf) {
                     }
                 }
                 //winnow down those cards by grabbing randomly by weight
-                use weighted_sampling::Weighted;
-                impl Weighted<CardSpec> for CardSpec {
-                    fn weight(&self) -> f64 {
-                        self.frequency_modifier
-                    }
-                    fn transmit(self) -> CardSpec {
-                        self
-                    }
-                }
                 weighted_sampling::weighted_draws(
                     &mut eg,
                     cardgens[i].min_count,
@@ -169,7 +182,7 @@ fn gen_cards(assets: &Rc<Assets>, conf: &Conf) {
         if fconf.gen_svgs {
             do_cards(&ends_specs, final_ends_svgs_path, conf, &mut rng);
             do_cards(&means_specs, final_means_svgs_path, conf, &mut rng);
-            
+
             prep_clear_dir(final_land_svgs_path);
             for spec in generation::land_specs(&assets, &fconf.land_counts)[0]
                 .generator
@@ -177,7 +190,7 @@ fn gen_cards(assets: &Rc<Assets>, conf: &Conf) {
             {
                 write_spec(&spec, conf, final_land_svgs_path);
             }
-            
+
             prep_clear_dir(final_surplus_land_svgs_path);
             for spec in generation::land_specs(&assets, &fconf.land_surplus_counts)[0]
                 .generator
@@ -187,10 +200,26 @@ fn gen_cards(assets: &Rc<Assets>, conf: &Conf) {
             }
         }
         if fconf.gen_pngs {
-            render_pngs_with_from_to(final_ends_svgs_path, final_ends_pngs_path, default_svg_to_png);
-            render_pngs_with_from_to(final_means_svgs_path, final_means_pngs_path, default_svg_to_png);
-            render_pngs_with_from_to(final_land_svgs_path, final_land_pngs_path, default_svg_to_png);
-            render_pngs_with_from_to(final_surplus_land_svgs_path, final_surplus_land_pngs_path, default_svg_to_png);
+            render_pngs_with_from_to(
+                final_ends_svgs_path,
+                final_ends_pngs_path,
+                default_svg_to_png,
+            );
+            render_pngs_with_from_to(
+                final_means_svgs_path,
+                final_means_pngs_path,
+                default_svg_to_png,
+            );
+            render_pngs_with_from_to(
+                final_land_svgs_path,
+                final_land_pngs_path,
+                default_svg_to_png,
+            );
+            render_pngs_with_from_to(
+                final_surplus_land_svgs_path,
+                final_surplus_land_pngs_path,
+                default_svg_to_png,
+            );
         }
     } else {
         let debug_output_dir = Path::new(&conf.output);
@@ -308,7 +337,7 @@ fn render_pngs_with(renderer: fn(&Path, &Path, &Database)) {
     let from = Path::new("generated_card_svgs");
     render_pngs_with_from_to(from, to, renderer);
 }
-fn render_pngs_with_from_to(from:&Path, to:&Path, renderer: fn(&Path, &Path, &Database)){
+fn render_pngs_with_from_to(from: &Path, to: &Path, renderer: fn(&Path, &Path, &Database)) {
     //clear dir if present
     if let Ok(dens) = read_dir(&to) {
         for item_m in dens {
@@ -345,12 +374,13 @@ fn main() {
             gen_count: 4,
             gen_front: true,
             gen_back: false,
-            final_gen: Some(Box::new(FinalGenConf {
-                gen_svgs: true,
-                gen_pngs: false,
-                ..FinalGenConf::default()
-            })),
-            // final_gen: None,
+            cut_clip: true,
+            // final_gen: Some(Box::new(FinalGenConf {
+            //     gen_svgs: true,
+            //     gen_pngs: false,
+            //     ..FinalGenConf::default()
+            // })),
+            final_gen: None,
         },
     );
     // svg_to_png_using_resvg(&Path::new("simple-case.svg"), &Path::new(""), &get_fonts())

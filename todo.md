@@ -11,3 +11,4 @@
     - travel ability that only goes towards or away from the caster #clown
     - [x] dog altruism (share the values of whoever you're next to) #clown
         - U(o) = if o.b { if o.c { 1 } else { 0 } } else { if o.c { 2 } else { 5 } }
+
