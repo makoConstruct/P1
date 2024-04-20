@@ -37,6 +37,8 @@ where
     }
 }
 
+const CARD_BACKGROUND_COLOR:&'static str = "f1f2f2";
+
 // field forest mountain volcano lake ice tomb void
 pub type ElementTag = usize;
 pub const FIELD_I: usize = 0;
@@ -65,6 +67,9 @@ pub const ELEMENT_G: [ElementGenerator; 8] = [
 ];
 pub const ELEMENT_NAMES: [&'static str; 8] = [
     "field", "forest", "mountain", "volcano", "lake", "ice", "tomb", "void",
+];
+pub const ELEMENT_ARTICLE: [&'static str; 8] = [
+    "a", "a", "a", "a", "a", "an", "a", "a",
 ];
 pub const ELEMENT_NAMES_PLURAL: [&'static str; 8] = [
     "fields",
@@ -118,7 +123,17 @@ pub fn element_primaries() -> impl Indexing<Item = (ElementTag, ElementTag)> {
 
 pub type ElementGenerator = fn(V2, f64, &mut dyn Write);
 pub fn each_nonequal_element() -> impl Indexing<Item = (ElementTag, ElementTag)> {
-    Cross(elements(), 0..7).into_map(|(a, b)| (a, if a > b { b } else { b + 1 }))
+    Cross(elements(), 0..7).into_map(|(a, b)| (a, if b >= a { b + 1 } else { b }))
+}
+pub fn each_unordered_nonopposite_unequal_pair() -> impl Indexing<Item = (ElementTag, ElementTag)> {
+    Cross(0..8, 0..6).into_map(|(a, mut b)| {
+        let ao = opposite_element(a);
+        let mi = a.min(ao);
+        let ma = a.max(ao);
+        if b >= mi {b += 1}
+        if b >= ma {b += 1}
+        (a, b)
+    })
 }
 pub fn each_unordered_nonequal_pairing() -> impl Indexing<Item = (ElementTag, ElementTag)> {
     mako_infinite_shuffle::KSubsets::new(8, 2).into_map(|v| (v[0], v[1]))
@@ -647,7 +662,7 @@ impl CardSpec {
             generate_back: Rc::new({
                 let assets = assets.clone();
                 move |w| {
-                    backing(
+                    card_outer(&Displaying(|w| backing(
                         &assets,
                         &Displaying(|w| front_graphic(w)),
                         w,
@@ -655,7 +670,8 @@ impl CardSpec {
                         level,
                         clown,
                         false,
-                    );
+                    )), "", CARD_BACKGROUND_COLOR, false, w);
+                    
                 }
             }),
             properties,
@@ -682,7 +698,8 @@ impl CardSpec {
                 let front_inner = rcd.clone();
                 Rc::new(move |w| {
                     let scc = sc.clone();
-                    end_front_inner(&front_inner, scc.clone(), w);
+                    // card_front_outer(, name, background_color, rotate, to)
+                    end_outer(&Displaying(|w| end_front_inner(&front_inner, scc.clone(), w)), w);
                 })
             },
             generate_back: Rc::new({
@@ -690,7 +707,7 @@ impl CardSpec {
                 let front_inner = rcd.clone();
                 move |w| {
                     //you have to clone, because this lambda could be called multiple times, meaning it has to retain something to clone from to create the lambda ahead
-                    end_backing(&assets, &front_inner, w, &back_text, level, clown);
+                    end_outer(&Displaying(|w| end_backing(&assets, &front_inner, w, &back_text, level, clown)), w);
                 }
             }),
             frequency_modifier: 1.0,
@@ -700,38 +717,25 @@ impl CardSpec {
 }
 
 
-pub fn svg_outer(cut_clip:bool, inserting: &impl Display, to: &mut dyn Write) {
-    let (clipper, clip_filter) = if cut_clip {
-    (
-        r##"<clipPath
-    clipPathUnits="userSpaceOnUse"
-    id="cardcut">
-    <path
-        fill="#ffffff"
-        stroke="#ec1e28"
-        stroke-width="0.374174"
-        d="M 138.9062,208.35959 H 19.8437 c -5.4799,0 -9.9220999,-4.4417 -9.9220999,-9.9219 V 19.844 c 0,-5.4802 4.4421999,-9.9219001 9.9220999,-9.9219001 h 119.0625 c 5.48,0 9.9218,4.4417001 9.9218,9.9219001 v 178.59369 c 0,5.4802 -4.4418,9.9219 -9.9218,9.9219 z"
-        id="path23"
-        style="fill:#f1f2f2;fill-opacity:1;stroke:none" />
-</clipPath>"##,
-        r##"clip-path="url(#cardcut)""##,
-    )
-} else {
-    ("", "")
-};
-    write!(
-        to,
-r##"<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<!-- Created partially with Inkscape (http://www.inkscape.org/) but primarily through codegen -->
+pub fn land_hex_usual_bounds()-> Rect {
+    let a = V2::new(13.174, 9.298);
+    Rect {
+        ul: a,
+        br: a + V2::new(292.189, 257.660),
+    }
+}
+pub fn land_hex_svg_outer(inserting: &impl Display, background_color:&str, to: &mut dyn Write){
+    write!(to, r##"<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) and mako -->
 
 <svg
-   width="158.75mm"
-   height="218.28127mm"
-   viewBox="0 0 158.75 218.28127"
+   width="317.5mm"
+   height="277.8125mm"
+   viewBox="0 0 317.5 277.8125"
    version="1.1"
    id="svg1"
-   inkscape:version="1.3.1 (91b66b0783, 2023-11-16)"
-   sodipodi:docname="card front template.svg"
+   inkscape:version="1.3.2 (091e20ef0f, 2023-11-25)"
+   sodipodi:docname="hex template.svg"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
@@ -746,25 +750,35 @@ r##"<?xml version="1.0" encoding="UTF-8" standalone="no"?>
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
      inkscape:document-units="mm"
-     inkscape:zoom="0.64462111"
-     inkscape:cx="197.79061"
-     inkscape:cy="62.827604"
-     inkscape:window-width="1876"
-     inkscape:window-height="1032"
-     inkscape:window-x="44"
+     inkscape:zoom="0.5455178"
+     inkscape:cx="647.09162"
+     inkscape:cy="417.95153"
+     inkscape:window-width="1896"
+     inkscape:window-height="1052"
+     inkscape:window-x="24"
      inkscape:window-y="0"
      inkscape:window-maximized="1"
      inkscape:current-layer="layer1" />
-  <defs id="defs_clip">
-  {clipper}
-  </defs>
-    <g {clip_filter}>
-        {inserting}
-    </g>
+  <defs id="defs1"></defs>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <polygon
+       fill="#{background_color}"
+       points="288,-0.25 0,-0.25 0,251.75 288,251.75 "
+       id="polygon3673"
+       transform="matrix(1.1024306,0,0,1.1024306,0,0.27560834)"
+       style="fill:#{background_color};fill-opacity:1" />
+    <path
+       fill="#{background_color}"
+       d="m 94.154184,266.95686 c -5.116379,0 -11.394721,-3.62479 -13.954567,-8.05545 L 15.093377,146.18339 c -2.558741,-4.43066 -2.558741,-11.68025 0,-16.10981 L 80.199617,17.352258 C 82.758359,12.922692 89.037805,9.2979001 94.154184,9.2979001 H 224.3832 c 5.11638,0 11.39583,3.6247919 13.95346,8.0543579 l 65.10845,112.721322 c 2.55764,4.42956 2.55764,11.67915 0,16.10981 l -65.10845,112.71912 c -2.55763,4.43067 -8.83818,8.05546 -13.95346,8.05546 H 94.154184 Z"
+       id="path3673"
+       style="fill:#{background_color};fill-opacity:1;stroke:none;stroke-width:1.10243" />
+    {inserting}
+  </g>
 </svg>
-"##,
-    )
-    .unwrap();
+"##).unwrap();
 }
 
 
@@ -819,7 +833,9 @@ pub fn backing(
         }
     });
     write!(to,
-r##"  <defs
+r##"
+
+<defs
      id="defs1">
     <rect
        x="73.083376"
@@ -899,6 +915,38 @@ pub fn just_1(color: &str, to: &mut dyn Write) {
   </g></g>"##,
         offset.x, offset.y
     ).unwrap()
+}
+
+pub fn underline(color: &str, anchor:V2, grav:V2, hspan: f64, to: &mut dyn Write) {
+    let uspan = V2::new(81.849, 23.243);
+    let scale = hspan/uspan.x;
+    let offset = offset_for_grav_scale(anchor, grav, uspan, scale);
+    write!(to, r##"<g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     transform="translate({},{}) scale({scale})"
+     id="layer1">
+    <rect
+       transform="scale(-1)"
+       ry="1.9218473"
+       rx="1.9218473"
+       y="-15.105407"
+       x="-81.849274"
+       height="15.105408"
+       width="81.849274"
+       id="rect4"
+       style="fill:#f1f2f2;fill-opacity:1;stroke:none;stroke-width:6.42758;stroke-linecap:butt;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1" />
+    <rect
+       transform="scale(-1)"
+       ry="1.9218473"
+       rx="1.9218473"
+       y="-23.243406"
+       x="-81.849274"
+       height="15.105408"
+       width="81.849274"
+       id="rect3"
+       style="fill:#{color};fill-opacity:1;stroke:none;stroke-width:6.42758;stroke-linecap:butt;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1" />
+  </g>"##, offset.x, offset.y).unwrap();
 }
 
 pub fn big_splat(color: &str, to: &mut dyn Write) {
@@ -996,6 +1044,7 @@ pub fn tilted_pair(center: V2, distance: f64) -> (V2, V2) {
     (c1, c2)
 }
 
+//these two replicate each others' dimensions
 pub fn paired(e1: ElementTag, e2: ElementTag, flipped: bool, to: &mut dyn Write) {
     let sized = 0.55;
     let spaced = 0.08;
@@ -1042,6 +1091,9 @@ impl Rect {
     ///specifically it's reduced by a proportion of the smallest dimension
     pub fn shrunk(&self, to_proportion: f64) -> Rect {
         self.reduced_by(self.span().min() * (1.0 - to_proportion) / 2.0)
+    }
+    pub fn grav_point(&self, grav: Gravity)-> V2 {
+        self.center() + grav.component_mul(&(self.span()/2.0))
     }
 }
 
@@ -1666,13 +1718,12 @@ pub fn guylike(asset: &Asset, base_centered: V2, scale: f64, to: &mut dyn Write)
 }
 
 pub fn blank_front(inserting: &impl Display, color: &str, rotate: bool, to: &mut dyn Write) {
-    card_front_outer(inserting, "", color, rotate, to);
+    card_outer(inserting, "", color, rotate, to);
 }
 pub fn means_front(inserting: &impl Display, name: &str, to: &mut dyn Write) {
-    let background_color = "f1f2f2";
-    card_front_outer(inserting, name, background_color, false, to);
+    card_outer(inserting, name, CARD_BACKGROUND_COLOR, false, to);
 }
-pub fn card_front_outer(
+pub fn card_outer(
     inserting: &impl Display,
     name: &str,
     background_color: &str,
@@ -1680,22 +1731,40 @@ pub fn card_front_outer(
     to: &mut dyn Write,
 ) {
     let rotation = if rotate { "90" } else { "0" };
-    write!(to, r##"
-  <defs
-     id="defs1">
-    <rect
-       x="40.66116"
-       y="678.98822"
-       width="512.60158"
-       height="111.65349"
-       id="rect10" />
-    <rect
-       x="442.54103"
-       y="764.68524"
-       width="32.549689"
-       height="18.533424"
-       id="rect9" />
-  </defs>
+    write!(to, r##"<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) and also with mako -->
+
+<svg
+   width="158.75mm"
+   height="218.28127mm"
+   viewBox="0 0 158.75 218.28127"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.3.1 (91b66b0783, 2023-11-16)"
+   sodipodi:docname="card front template.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     inkscape:zoom="0.64462111"
+     inkscape:cx="197.79061"
+     inkscape:cy="62.827604"
+     inkscape:window-width="1876"
+     inkscape:window-height="1032"
+     inkscape:window-x="44"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
   <g
      inkscape:label="Layer 1"
      inkscape:groupmode="layer"
@@ -1734,8 +1803,86 @@ pub fn card_front_outer(
          x="84.767989"
          y="722.40316"
          id="tspan3">{name}</tspan></text>
-  </g>"##).unwrap();
+  </g>
+</svg>
+"##).unwrap();
 }
+
+
+pub fn end_outer(
+    inserting: &impl Display,
+    to: &mut dyn Write,
+) {
+    let background_color = "f1f2f2";
+    write!(to, r##"<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) and also with mako -->
+
+<svg
+   width="158.75mm"
+   height="218.28127mm"
+   viewBox="0 0 158.75 218.28127"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.3.1 (91b66b0783, 2023-11-16)"
+   sodipodi:docname="card front template.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     inkscape:zoom="0.64462111"
+     inkscape:cx="197.79061"
+     inkscape:cy="62.827604"
+     inkscape:window-width="1876"
+     inkscape:window-height="1032"
+     inkscape:window-x="44"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="g8"
+     transform="translate(0,0)">
+    <polygon
+       fill="#929497"
+       points="144,198 144,0 0,0 0,198 "
+       id="assetback"
+       transform="matrix(1.1024306,0,0,1.1024306,0,2e-4)"
+       style="fill:#{background_color};fill-opacity:1;stroke-width:0.24" />
+    <path
+       fill="#ffffff"
+       stroke="#ec1e28"
+       stroke-width="0.374174"
+       d="M 138.9062,208.35959 H 19.8437 c -5.4799,0 -9.9221,-4.4417 -9.9221,-9.9219 V 19.844 c 0,-5.4802 4.4422,-9.9219 9.9221,-9.9219 h 119.0625 c 5.48,0 9.9218,4.4417 9.9218,9.9219 v 178.59369 c 0,5.4802 -4.4418,9.9219 -9.9218,9.9219 z"
+       id="cutline"
+       style="fill:#{background_color};fill-opacity:1;stroke:none" />
+    <g
+       transform="translate(84.75197610056054,103.4528234964666) scale(0.5)"
+       id="g1">
+      <g
+         inkscape:label="Layer 1"
+         inkscape:groupmode="layer"
+         id="layer1"
+         transform="translate(-1066.7783,-589.34825)" />
+    </g>
+    <g>
+        {inserting}
+    </g>
+  </g>
+</svg>
+"##).unwrap();
+}
+
 
 pub fn flip_rings(
     to_color: &str,

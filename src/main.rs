@@ -90,24 +90,12 @@ fn gen_cards(assets: &Rc<Assets>, conf: &Conf) {
             let mut w =
                 File::create(output_dir.join(&format!("{}[face,{}].svg", &spec.name, spec.repeat)))
                     .unwrap();
-            svg_outer(
-                conf.cut_clip,
-                &Displaying(|w| {
-                    (spec.generate_front)(w);
-                }),
-                &mut w,
-            );
+            (spec.generate_front)(&mut w);
         }
         if conf.gen_back {
             let mut w =
                 File::create(output_dir.join(&format!("{}[back].svg", &spec.name))).unwrap();
-            svg_outer(
-                conf.cut_clip,
-                &Displaying(|w| {
-                    (spec.generate_back)(w);
-                }),
-                &mut w,
-            );
+            (spec.generate_back)(&mut w);
         }
     }
 
@@ -182,22 +170,35 @@ fn gen_cards(assets: &Rc<Assets>, conf: &Conf) {
         if fconf.gen_svgs {
             do_cards(&ends_specs, final_ends_svgs_path, conf, &mut rng);
             do_cards(&means_specs, final_means_svgs_path, conf, &mut rng);
-
+            
+            // I changed my mind, not going to have a separate surplus land deck. There'll just be one deck and we'll instruct users to separate the surplus.
+            let land_counts: Vec<u8> = fconf.land_counts.iter().zip(fconf.land_surplus_counts.iter()).map(|(a, b)| a + b).collect();
+            // // ack, as part of budgeting, we'll ignore the surplus_counts and just print the excess that we can afford
+            // let mut land_counts: Vec<u8> = fconf.land_counts.clone();
+            // let cards_per_sheet: u8 = 12; //all that matters for cost is how many sheets you spend
+            // let modu = land_counts.iter().sum() % cards_per_sheet;
+            // let mut free_cards = if modu == 0 { 0 } else { cards_per_sheet - modu }; //so we get these for free
+            // let mut ci=0;
+            // while free_cards > 0 {
+            //     land_counts[ci] += 1;
+            //     free_cards -= 1;
+            //     ci = (ci + 1)%4;
+            // }
             prep_clear_dir(final_land_svgs_path);
-            for spec in generation::land_specs(&assets, &fconf.land_counts)[0]
+            for spec in generation::land_specs(&assets, &land_counts)[0]
                 .generator
                 .iter()
             {
                 write_spec(&spec, conf, final_land_svgs_path);
             }
 
-            prep_clear_dir(final_surplus_land_svgs_path);
-            for spec in generation::land_specs(&assets, &fconf.land_surplus_counts)[0]
-                .generator
-                .iter()
-            {
-                write_spec(&spec, conf, final_surplus_land_svgs_path);
-            }
+            // prep_clear_dir(final_surplus_land_svgs_path);
+            // for spec in generation::land_specs(&assets, &fconf.land_surplus_counts)[0]
+            //     .generator
+            //     .iter()
+            // {
+            //     write_spec(&spec, conf, final_surplus_land_svgs_path);
+            // }
         }
         if fconf.gen_pngs {
             render_pngs_with_from_to(
@@ -370,17 +371,17 @@ fn main() {
         &assets,
         &Conf {
             output: "generated_card_svgs".to_string(),
-            seed: 90,
+            seed: 879,
             gen_count: 4,
             gen_front: true,
-            gen_back: false,
-            cut_clip: true,
-            // final_gen: Some(Box::new(FinalGenConf {
-            //     gen_svgs: true,
-            //     gen_pngs: false,
-            //     ..FinalGenConf::default()
-            // })),
-            final_gen: None,
+            gen_back: true,
+            cut_clip: false,
+            final_gen: Some(Box::new(FinalGenConf {
+                gen_svgs: true,
+                gen_pngs: false,
+                ..FinalGenConf::default()
+            })),
+            // final_gen: None,
         },
     );
     // svg_to_png_using_resvg(&Path::new("simple-case.svg"), &Path::new(""), &get_fonts())

@@ -47,12 +47,12 @@ pub fn weighted_draws<T>(
             if di == draws.len() { return false }
             acc += e.weight();
             if acc > draws[di].into() {
-                while acc > draws[di].into() {
-                    di += 1;
-                    if di >= draws.len() { break; }
-                }
+                di += 1;
                 quota -= 1;
                 total_weight -= e.weight();
+                while di < draws.len() && acc > draws[di].into() {
+                    di += 1;
+                }
                 true
             } else {
                 false
