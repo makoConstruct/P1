@@ -22,8 +22,16 @@ pub fn both_dims(v: f64) -> V2 {
     V2::new(v, v)
 }
 /// scale_fit(a, b)*a fits within b
-pub fn scale_fit(v:V2, bounds:V2)-> f64 {
-    (bounds.x.abs()/v.x.abs()).min(bounds.y.abs()/v.y.abs())
+pub fn scale_fit(v: V2, bounds: V2) -> f64 {
+    (bounds.x.abs() / v.x.abs()).min(bounds.y.abs() / v.y.abs())
+}
+
+pub fn normalize<const N: usize>(mut v: [f64; N]) -> [f64; N] {
+    let sum: f64 = v.iter().sum();
+    for vv in v.iter_mut() {
+        *vv /= sum;
+    }
+    v
 }
 
 pub struct Displaying<F: Fn(&mut dyn Write)>(pub F);
@@ -37,28 +45,28 @@ where
     }
 }
 
-const CARD_BACKGROUND_COLOR:&'static str = "f1f2f2";
+const CARD_BACKGROUND_COLOR: &'static str = "f1f2f2";
 
 // field forest mountain volcano lake ice tomb void
 pub type ElementTag = usize;
-pub const FIELD_I: usize = 0;
-pub const FOREST_I: usize = 1;
-pub const MOUNTAIN_I: usize = 2;
-pub const VOLCANO_I: usize = 3;
-pub const LAKE_I: usize = 4;
-pub const ICE_I: usize = 5;
-pub const TOMB_I: usize = 6;
-pub const VOID_I: usize = 7;
+pub const FIELD: usize = 0;
+pub const FOREST: usize = 1;
+pub const MOUNTAIN: usize = 2;
+pub const VOLCANO: usize = 3;
+pub const LAKE: usize = 4;
+pub const ICE: usize = 5;
+pub const TOMB: usize = 6;
+pub const VOID: usize = 7;
 pub fn opposite_element(e: ElementTag) -> ElementTag {
     match e {
-        FIELD_I => FOREST_I,
-        FOREST_I => FIELD_I,
-        MOUNTAIN_I => VOLCANO_I,
-        VOLCANO_I => MOUNTAIN_I,
-        LAKE_I => ICE_I,
-        ICE_I => LAKE_I,
-        TOMB_I => VOID_I,
-        VOID_I => TOMB_I,
+        FIELD => FOREST,
+        FOREST => FIELD,
+        MOUNTAIN => VOLCANO,
+        VOLCANO => MOUNTAIN,
+        LAKE => ICE,
+        ICE => LAKE,
+        TOMB => VOID,
+        VOID => TOMB,
         _ => panic!("invalid ElementTag"),
     }
 }
@@ -68,9 +76,7 @@ pub const ELEMENT_G: [ElementGenerator; 8] = [
 pub const ELEMENT_NAMES: [&'static str; 8] = [
     "field", "forest", "mountain", "volcano", "lake", "ice", "tomb", "void",
 ];
-pub const ELEMENT_ARTICLE: [&'static str; 8] = [
-    "a", "a", "a", "a", "a", "an", "a", "a",
-];
+pub const ELEMENT_ARTICLE: [&'static str; 8] = ["a", "a", "a", "a", "a", "an", "a", "a"];
 pub const ELEMENT_NAMES_PLURAL: [&'static str; 8] = [
     "fields",
     "forests",
@@ -95,7 +101,7 @@ pub const ELEMENT_COLORS_FRONT: [&'static str; 8] = [
     "a3e2a7", "7eb47f", "e5e383", "f2b7b7", "a5dae0", "f4fcfd", "dedede", "414141",
 ];
 pub const fn element_colors_bold(i: ElementTag) -> &'static str {
-    if i != ICE_I && i != TOMB_I {
+    if i != ICE && i != TOMB {
         ELEMENT_COLORS_FRONT[i]
     } else {
         BOLD_COLOR_FOR_GRAPHIC
@@ -130,8 +136,12 @@ pub fn each_unordered_nonopposite_unequal_pair() -> impl Indexing<Item = (Elemen
         let ao = opposite_element(a);
         let mi = a.min(ao);
         let ma = a.max(ao);
-        if b >= mi {b += 1}
-        if b >= ma {b += 1}
+        if b >= mi {
+            b += 1
+        }
+        if b >= ma {
+            b += 1
+        }
         (a, b)
     })
 }
@@ -207,8 +217,8 @@ fn anchor_for_grav(grav: Gravity, bounds: V2) -> V2 {
 
 pub fn field_g(center: V2, scale: f64, to: &mut dyn Write) {
     let offset = center - scale * BIG_ELEMENT_DIMENSIONS / 2.0;
-    let color_back = ELEMENT_COLORS_BACK[FIELD_I];
-    let color_front = ELEMENT_COLORS_FRONT[FIELD_I];
+    let color_back = ELEMENT_COLORS_BACK[FIELD];
+    let color_front = ELEMENT_COLORS_FRONT[FIELD];
     write!(to,
         r#"<g transform="translate({},{}) scale({})"><g
     inkscape:label="Layer 1"
@@ -286,8 +296,8 @@ pub fn field_g(center: V2, scale: f64, to: &mut dyn Write) {
 }
 pub fn forest_g(center: V2, scale: f64, to: &mut dyn Write) {
     let offset = center - scale * BIG_ELEMENT_DIMENSIONS / 2.0;
-    let color_back = ELEMENT_COLORS_BACK[FOREST_I];
-    let color_front = ELEMENT_COLORS_FRONT[FOREST_I];
+    let color_back = ELEMENT_COLORS_BACK[FOREST];
+    let color_front = ELEMENT_COLORS_FRONT[FOREST];
     write!(to,
         r#"<g transform="translate({},{}) scale({})"><g
      inkscape:label="Layer 1"
@@ -662,16 +672,23 @@ impl CardSpec {
             generate_back: Rc::new({
                 let assets = assets.clone();
                 move |w| {
-                    card_outer(&Displaying(|w| backing(
-                        &assets,
-                        &Displaying(|w| front_graphic(w)),
-                        w,
-                        &back_text,
-                        level,
-                        clown,
+                    card_outer(
+                        &Displaying(|w| {
+                            backing(
+                                &assets,
+                                &Displaying(|w| front_graphic(w)),
+                                w,
+                                &back_text,
+                                level,
+                                clown,
+                                false,
+                            )
+                        }),
+                        "",
+                        CARD_BACKGROUND_COLOR,
                         false,
-                    )), "", CARD_BACKGROUND_COLOR, false, w);
-                    
+                        w,
+                    );
                 }
             }),
             properties,
@@ -699,7 +716,10 @@ impl CardSpec {
                 Rc::new(move |w| {
                     let scc = sc.clone();
                     // card_front_outer(, name, background_color, rotate, to)
-                    end_outer(&Displaying(|w| end_front_inner(&front_inner, scc.clone(), w)), w);
+                    end_outer(
+                        &Displaying(|w| end_front_inner(&front_inner, scc.clone(), w)),
+                        w,
+                    );
                 })
             },
             generate_back: Rc::new({
@@ -707,7 +727,12 @@ impl CardSpec {
                 let front_inner = rcd.clone();
                 move |w| {
                     //you have to clone, because this lambda could be called multiple times, meaning it has to retain something to clone from to create the lambda ahead
-                    end_outer(&Displaying(|w| end_backing(&assets, &front_inner, w, &back_text, level, clown)), w);
+                    end_outer(
+                        &Displaying(|w| {
+                            end_backing(&assets, &front_inner, w, &back_text, level, clown)
+                        }),
+                        w,
+                    );
                 }
             }),
             frequency_modifier: 1.0,
@@ -716,15 +741,14 @@ impl CardSpec {
     }
 }
 
-
-pub fn land_hex_usual_bounds()-> Rect {
+pub fn land_hex_usual_bounds() -> Rect {
     let a = V2::new(13.174, 9.298);
     Rect {
         ul: a,
         br: a + V2::new(292.189, 257.660),
     }
 }
-pub fn land_hex_svg_outer(inserting: &impl Display, background_color:&str, to: &mut dyn Write){
+pub fn land_hex_svg_outer(inserting: &impl Display, background_color: &str, to: &mut dyn Write) {
     write!(to, r##"<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!-- Created with Inkscape (http://www.inkscape.org/) and mako -->
 
@@ -781,7 +805,6 @@ pub fn land_hex_svg_outer(inserting: &impl Display, background_color:&str, to: &
 "##).unwrap();
 }
 
-
 pub fn end_backing(
     assets: &Rc<Assets>,
     inserting: &impl Display,
@@ -807,8 +830,16 @@ pub fn backing(
     let level_marker = Displaying(|w| {
         let mut offset = 0.0;
         if level >= 2 {
-            assets.level_2.by_grav_rad(
+            assets.level2.by_grav_rad(
                 cutline_bounds_shrunk_appropriately().br,
+                RIGHT_BOTTOM,
+                marker_rad,
+                w,
+            );
+            offset += marker_rad * 2.0 + sep;
+        } else if level == 1 {
+            assets.level1.by_grav_rad(
+                cutline_bounds_shrunk_appropriately().br + V2::new(-offset, 0.0),
                 RIGHT_BOTTOM,
                 marker_rad,
                 w,
@@ -917,9 +948,9 @@ pub fn just_1(color: &str, to: &mut dyn Write) {
     ).unwrap()
 }
 
-pub fn underline(color: &str, anchor:V2, grav:V2, hspan: f64, to: &mut dyn Write) {
+pub fn underline(color: &str, anchor: V2, grav: V2, hspan: f64, to: &mut dyn Write) {
     let uspan = V2::new(81.849, 23.243);
-    let scale = hspan/uspan.x;
+    let scale = hspan / uspan.x;
     let offset = offset_for_grav_scale(anchor, grav, uspan, scale);
     write!(to, r##"<g
      inkscape:label="Layer 1"
@@ -975,20 +1006,30 @@ pub fn big_splat_scaled(color: &str, scale: f64, to: &mut dyn Write) {
     ).unwrap()
 }
 
-pub fn road_blob_rad(assets:&Assets, e1:ElementTag, e2:ElementTag, road:ElementTag, bounds:Rect, to: &mut dyn Write) {
+pub fn road_blob_rad(
+    assets: &Assets,
+    e1: ElementTag,
+    e2: ElementTag,
+    road: ElementTag,
+    bounds: Rect,
+    to: &mut dyn Write,
+) {
     let center = bounds.center();
-    let unscaled_anchor = V2::new(53.649,53.649);
+    let unscaled_anchor = V2::new(53.649, 53.649);
     let unscaled_rad = unscaled_anchor.x;
     let unscaled_span = V2::new(167.936, 212.7457);
     // to understand this code, understand that inner_span is the sort fo skeleton of the road blob
-    let inner_span = V2::new(unscaled_span.x - 2.0*unscaled_rad, unscaled_span.y - 2.0*unscaled_rad);
-    let to_corner_element_center = V2::new(inner_span.x*1.5, -inner_span.y/2.0);
+    let inner_span = V2::new(
+        unscaled_span.x - 2.0 * unscaled_rad,
+        unscaled_span.y - 2.0 * unscaled_rad,
+    );
+    let to_corner_element_center = V2::new(inner_span.x * 1.5, -inner_span.y / 2.0);
     let unscaled_total_radii = to_corner_element_center + both_dims(unscaled_rad);
-    let scale = scale_fit(unscaled_total_radii, bounds.span()/2.0);
-    let e1c = unscaled_span/2.0 - to_corner_element_center;
-    let e2c = unscaled_span/2.0 + to_corner_element_center;
-    let rc = unscaled_span/2.0 - inner_span/2.0;
-    let offset = center - scale*unscaled_span/2.0;
+    let scale = scale_fit(unscaled_total_radii, bounds.span() / 2.0);
+    let e1c = unscaled_span / 2.0 - to_corner_element_center;
+    let e2c = unscaled_span / 2.0 + to_corner_element_center;
+    let rc = unscaled_span / 2.0 - inner_span / 2.0;
+    let offset = center - scale * unscaled_span / 2.0;
     let color = ELEMENT_COLORS_BACK[road];
     write!(to,
         r##"<g
@@ -1009,7 +1050,6 @@ pub fn road_blob_rad(assets:&Assets, e1:ElementTag, e2:ElementTag, road:ElementT
     assets.element(road).centered_rad(rc, unscaled_rad, to);
     write!(to, r##"</g>"##).unwrap();
 }
-
 
 pub fn negatory(to: &mut dyn Write) {
     // let scale = 0.54;
@@ -1092,8 +1132,8 @@ impl Rect {
     pub fn shrunk(&self, to_proportion: f64) -> Rect {
         self.reduced_by(self.span().min() * (1.0 - to_proportion) / 2.0)
     }
-    pub fn grav_point(&self, grav: Gravity)-> V2 {
-        self.center() + grav.component_mul(&(self.span()/2.0))
+    pub fn grav_point(&self, grav: Gravity) -> V2 {
+        self.center() + grav.component_mul(&(self.span() / 2.0))
     }
 }
 
@@ -1450,7 +1490,8 @@ pub fn load_asset(at: &Path, anchor: Option<V2>) -> Asset {
 pub struct Assets {
     pub kill: Asset,
     pub negatory: Asset,
-    pub level_2: Asset,
+    pub level1: Asset,
+    pub level2: Asset,
     pub clown: Asset,
     pub guy: Asset,
     pub guy2: Asset,
@@ -1473,6 +1514,7 @@ pub struct Assets {
     pub darker_blank: Asset,
     pub come_on_down: Asset,
     pub back_colored_circle: Asset,
+    pub triangle: Asset,
     pub step: Asset,
     pub dog_altruism: Asset,
     pub kill_diamond: Asset,
@@ -1493,6 +1535,12 @@ pub struct Assets {
     pub flip_ice: Asset,
     pub flip_tomb: Asset,
     pub flip_void: Asset,
+
+    //means flipping either
+    pub flip_either_field_forest: Asset,
+    pub flip_either_mountain_volcano: Asset,
+    pub flip_either_tomb_void: Asset,
+    pub flip_either_lake_ice: Asset,
 }
 
 fn generate_either(e1: &Asset, e2: &Asset) -> Asset {
@@ -1560,7 +1608,8 @@ impl Assets {
     pub fn load(_assets_dir: &Path) -> Self {
         let kill = load_asset(&Path::new("assets/kill.svg"), None);
         let negatory = load_asset(&Path::new("assets/negatory_shadowed.svg"), None);
-        let level_2 = load_asset(&Path::new("assets/level_22.svg"), None);
+        let level2 = load_asset(&Path::new("assets/level_22.svg"), None);
+        let level1 = load_asset(&Path::new("assets/level1.svg"), None);
         let clown = load_asset(&Path::new("assets/clown.svg"), None);
         let guy = load_asset(&Path::new("assets/guy.svg"), None);
         let guyeye = load_asset(&Path::new("assets/guyeye.svg"), None);
@@ -1578,6 +1627,10 @@ impl Assets {
         let darker_blank = load_asset(&Path::new("assets/darker_blank.svg"), None);
         let come_on_down = load_asset(&Path::new("assets/come_on_down.svg"), None);
         let back_colored_circle = load_asset(&Path::new("assets/back_colored_circle.svg"), None);
+        let triangle = load_asset(
+            &Path::new("assets/triangle.svg"),
+            Some((V2::zeros() + V2::new(0.0, 1.0) + V2::new((3.0 / 4.0 as f64).sqrt(), 0.5)) / 3.0),
+        );
         let end_top_bar = load_asset(&Path::new("assets/end_top_bar.svg"), None);
         // let step = load_asset(&Path::new("assets/step.svg"), None);
         let step = load_asset(&Path::new("assets/step2.svg"), None);
@@ -1614,10 +1667,18 @@ impl Assets {
         let lake_ice = generate_either(&lake, &ice);
         let tomb_void = generate_either(&tomb, &void);
 
+        let flip_either_field_forest =
+            element_flip(&field_forest, &generate_either(&forest, &field));
+        let flip_either_mountain_volcano =
+            element_flip(&mountain_volcano, &generate_either(&volcano, &mountain));
+        let flip_either_tomb_void = element_flip(&tomb_void, &generate_either(&void, &tomb));
+        let flip_either_lake_ice = element_flip(&lake_ice, &generate_either(&ice, &lake));
+
         Self {
             kill,
             negatory,
-            level_2,
+            level1,
+            level2,
             clown,
             guy,
             guy2,
@@ -1629,6 +1690,7 @@ impl Assets {
             altruism,
             darker_blank,
             field,
+            triangle,
             forest,
             mountain,
             volcano,
@@ -1657,27 +1719,31 @@ impl Assets {
             lake_ice,
             tomb_void,
             kill_diamond,
+            flip_either_field_forest,
+            flip_either_mountain_volcano,
+            flip_either_tomb_void,
+            flip_either_lake_ice,
         }
     }
     pub fn element(&self, e: ElementTag) -> &Asset {
         match e {
-            FIELD_I => &self.field,
-            FOREST_I => &self.forest,
-            MOUNTAIN_I => &self.mountain,
-            VOLCANO_I => &self.volcano,
-            LAKE_I => &self.lake,
-            ICE_I => &self.ice,
-            TOMB_I => &self.tomb,
-            VOID_I => &self.void,
+            FIELD => &self.field,
+            FOREST => &self.forest,
+            MOUNTAIN => &self.mountain,
+            VOLCANO => &self.volcano,
+            LAKE => &self.lake,
+            ICE => &self.ice,
+            TOMB => &self.tomb,
+            VOID => &self.void,
             _ => panic!("no such element as {e}"),
         }
     }
     pub fn element_both(&self, e: ElementTag) -> &Asset {
         match e {
-            FIELD_I => &self.field_forest,
-            MOUNTAIN_I => &self.mountain_volcano,
-            LAKE_I => &self.lake_ice,
-            TOMB_I => &self.tomb_void,
+            FIELD => &self.field_forest,
+            MOUNTAIN => &self.mountain_volcano,
+            LAKE => &self.lake_ice,
+            TOMB => &self.tomb_void,
             _ => panic!(
                 "{} is an invalid tag for a pair of elements",
                 ELEMENT_NAMES[e]
@@ -1687,14 +1753,28 @@ impl Assets {
     pub fn flip_to(&self, e: ElementTag) -> &Asset {
         match e {
             //means flip TO field
-            FIELD_I => &self.flip_field,
-            FOREST_I => &self.flip_forest,
-            LAKE_I => &self.flip_lake,
-            ICE_I => &self.flip_ice,
-            TOMB_I => &self.flip_tomb,
-            VOID_I => &self.flip_void,
-            MOUNTAIN_I => &self.flip_mountain,
-            VOLCANO_I => &self.flip_volcano,
+            FIELD => &self.flip_field,
+            FOREST => &self.flip_forest,
+            LAKE => &self.flip_lake,
+            ICE => &self.flip_ice,
+            TOMB => &self.flip_tomb,
+            VOID => &self.flip_void,
+            MOUNTAIN => &self.flip_mountain,
+            VOLCANO => &self.flip_volcano,
+            _ => panic!("{e} is not an element tag"),
+        }
+    }
+    pub fn flip_either(&self, e: ElementTag) -> &Asset {
+        match e {
+            //means flip TO field
+            FIELD => &self.flip_either_field_forest,
+            FOREST => &self.flip_either_field_forest,
+            LAKE => &self.flip_either_lake_ice,
+            ICE => &self.flip_either_lake_ice,
+            TOMB => &self.flip_either_tomb_void,
+            VOID => &self.flip_either_tomb_void,
+            MOUNTAIN => &self.flip_either_mountain_volcano,
+            VOLCANO => &self.flip_either_mountain_volcano,
             _ => panic!("{e} is not an element tag"),
         }
     }
@@ -1765,6 +1845,21 @@ pub fn card_outer(
      inkscape:window-y="0"
      inkscape:window-maximized="1"
      inkscape:current-layer="layer1" />
+  <defs
+     id="defsbasic">
+    <rect
+       x="40.66116"
+       y="678.98822"
+       width="512.60158"
+       height="111.65349"
+       id="rect10" />
+    <rect
+       x="442.54103"
+       y="764.68524"
+       width="32.549689"
+       height="18.533424"
+       id="rect9" />
+    </defs>
   <g
      inkscape:label="Layer 1"
      inkscape:groupmode="layer"
@@ -1808,11 +1903,7 @@ pub fn card_outer(
 "##).unwrap();
 }
 
-
-pub fn end_outer(
-    inserting: &impl Display,
-    to: &mut dyn Write,
-) {
+pub fn end_outer(inserting: &impl Display, to: &mut dyn Write) {
     let background_color = "f1f2f2";
     write!(to, r##"<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!-- Created with Inkscape (http://www.inkscape.org/) and also with mako -->
@@ -1882,7 +1973,6 @@ pub fn end_outer(
 </svg>
 "##).unwrap();
 }
-
 
 pub fn flip_rings(
     to_color: &str,
@@ -2217,6 +2307,42 @@ impl Default for FinalGenConf {
             gen_svgs: true,
             gen_pngs: false,
         }
+    }
+}
+impl FinalGenConf {
+    pub fn frequency_for(&self, e: &CardSpec) -> f64 {
+        let mut total = 1.0;
+        if e.has_property(Preference, TOMB) {
+            total *= self.tomb_prefering_cards;
+        }
+        if e.has_property(Preference, VOID) {
+            total *= self.void_prefering_cards;
+        }
+        if e.has_property(Move, LAKE) || e.has_property(Move, ICE) {
+            total *= self.water_movement_cards;
+        }
+        if e.has_property(Kill, VOID) || e.has_property(Kill, VOLCANO) {
+            total *= self.kill_cards_for_void_volcano;
+        }
+        if e.has_property(Kill, FIELD) {
+            total *= self.kill_cards_for_field;
+        }
+        if e.has_property(Kill, TOMB) {
+            total *= self.kill_cards_for_tombs;
+        }
+        if e.has_property(Kill, MOUNTAIN) {
+            total *= self.kill_cards_for_mountain;
+        }
+        if e.has_property(Change, LAKE) || e.has_property(Change, ICE) {
+            total *= self.water_ice_changing_cards;
+        }
+        if e.has_property(Change, VOID) {
+            total *= self.cards_that_make_voids;
+        }
+        if e.has_property(Change, TOMB) {
+            total *= self.cards_that_make_tombs;
+        }
+        total
     }
 }
 // considering winnowing down according to constraints

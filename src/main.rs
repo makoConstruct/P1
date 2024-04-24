@@ -123,36 +123,7 @@ fn gen_cards(assets: &Rc<Assets>, conf: &Conf) {
             //set the weights on each individual cardspec according to the rules
             for (i, mut eg) in cards_by_kind.into_iter().enumerate() {
                 for e in eg.iter_mut() {
-                    if e.has_property(Preference, TOMB_I) {
-                        e.frequency_modifier *= fconf.tomb_prefering_cards;
-                    }
-                    if e.has_property(Preference, VOID_I) {
-                        e.frequency_modifier *= fconf.void_prefering_cards;
-                    }
-                    if e.has_property(Move, LAKE_I) || e.has_property(Move, ICE_I) {
-                        e.frequency_modifier *= fconf.water_movement_cards;
-                    }
-                    if e.has_property(Kill, VOID_I) || e.has_property(Kill, VOLCANO_I) {
-                        e.frequency_modifier *= fconf.kill_cards_for_void_volcano;
-                    }
-                    if e.has_property(Kill, FIELD_I) {
-                        e.frequency_modifier *= fconf.kill_cards_for_field;
-                    }
-                    if e.has_property(Kill, TOMB_I) {
-                        e.frequency_modifier *= fconf.kill_cards_for_tombs;
-                    }
-                    if e.has_property(Kill, MOUNTAIN_I) {
-                        e.frequency_modifier *= fconf.kill_cards_for_mountain;
-                    }
-                    if e.has_property(Change, LAKE_I) || e.has_property(Change, ICE_I) {
-                        e.frequency_modifier *= fconf.water_ice_changing_cards;
-                    }
-                    if e.has_property(Change, VOID_I) {
-                        e.frequency_modifier *= fconf.cards_that_make_voids;
-                    }
-                    if e.has_property(Change, TOMB_I) {
-                        e.frequency_modifier *= fconf.cards_that_make_tombs;
-                    }
+                    e.frequency_modifier *= fconf.frequency_for(&e);
                 }
                 //winnow down those cards by grabbing randomly by weight
                 weighted_sampling::weighted_draws(
@@ -162,6 +133,43 @@ fn gen_cards(assets: &Rc<Assets>, conf: &Conf) {
                     rng,
                 );
             }
+            // check frequencies, report imbalances and culprits
+            // field forest mountain volcano lake ice tomb void
+            let change_dist_preferred = normalize([0.9, 1.0, 0.85, 1.0, 1.5, 1.5, 1.0, 1.18]);
+            let mut change_dist_actual = [0.0; 8];
+            let kill_dist_preferred = normalize([0.6, 1.2, 1.15, 1.5, 0.85, 1.5, 0.5, 1.6]);
+            let mut kill_dist_actual = [0.0; 8];
+            for spec in cardspecs.iter() {
+                if let Some((_, es)) = spec.properties.iter().find(|e| e.0 == Change) {
+                    for e in elements().into_iter() {
+                        if es.contains(&e) {
+                            change_dist_actual[e] += 1.0;
+                        }
+                    }
+                }
+                if let Some((_, es)) = spec.properties.iter().find(|e| e.0 == Kill) {
+                    for e in elements().into_iter() {
+                        if es.contains(&e) {
+                            kill_dist_actual[e] += 1.0;
+                        }
+                    }
+                }
+            }
+            for (e, (a, p)) in normalize(kill_dist_actual).iter().zip(kill_dist_preferred.iter()).enumerate() {
+                if (a - p).abs() >= p*0.28 {
+                    let relation = if a - p > 0.0 { "higher" } else { "lower" };
+                    let en = ELEMENT_NAMES[e];
+                    println!("warning, ratio of kill cards that are {en}, {a}, is {relation} than expected ({p})");
+                }
+            }
+            for (e, (a, p)) in normalize(change_dist_actual).iter().zip(change_dist_preferred.iter()).enumerate() {
+                if (a - p).abs() >= p*0.28 {
+                    let relation = if a - p > 0.0 { "higher" } else { "lower" };
+                    let en = ELEMENT_NAMES[e];
+                    println!("warning, ratio of change cards that are {en}, {a}, is {relation} than expected ({p})");
+                }
+            }
+
             for spec in cardspecs.iter() {
                 write_spec(spec, conf, output_dir);
             }
@@ -170,20 +178,20 @@ fn gen_cards(assets: &Rc<Assets>, conf: &Conf) {
         if fconf.gen_svgs {
             do_cards(&ends_specs, final_ends_svgs_path, conf, &mut rng);
             do_cards(&means_specs, final_means_svgs_path, conf, &mut rng);
-            
+
             // I changed my mind, not going to have a separate surplus land deck. There'll just be one deck and we'll instruct users to separate the surplus.
-            let land_counts: Vec<u8> = fconf.land_counts.iter().zip(fconf.land_surplus_counts.iter()).map(|(a, b)| a + b).collect();
-            // // ack, as part of budgeting, we'll ignore the surplus_counts and just print the excess that we can afford
-            // let mut land_counts: Vec<u8> = fconf.land_counts.clone();
-            // let cards_per_sheet: u8 = 12; //all that matters for cost is how many sheets you spend
-            // let modu = land_counts.iter().sum() % cards_per_sheet;
-            // let mut free_cards = if modu == 0 { 0 } else { cards_per_sheet - modu }; //so we get these for free
-            // let mut ci=0;
-            // while free_cards > 0 {
-            //     land_counts[ci] += 1;
-            //     free_cards -= 1;
-            //     ci = (ci + 1)%4;
-            // }
+            // ack, as part of budgeting, we'll ignore the surplus_counts and just print the amount of excess that we can afford
+            // let land_counts: Vec<u8> = fconf.land_counts.iter().zip(fconf.land_surplus_counts.iter()).map(|(a, b)| a + b).collect();
+            let mut land_counts: Vec<u8> = fconf.land_counts.clone();
+            let cards_per_sheet: u8 = 12; //all that matters for cost is how many sheets you spend
+            let modu = land_counts.iter().sum::<u8>() % cards_per_sheet;
+            let mut free_cards = if modu == 0 { 0 } else { cards_per_sheet - modu }; //so we get these for free
+            let mut ci = 0;
+            while free_cards > 0 {
+                land_counts[ci] += 1;
+                free_cards -= 1;
+                ci = (ci + 1) % 4;
+            }
             prep_clear_dir(final_land_svgs_path);
             for spec in generation::land_specs(&assets, &land_counts)[0]
                 .generator
@@ -374,7 +382,7 @@ fn main() {
             seed: 879,
             gen_count: 4,
             gen_front: true,
-            gen_back: true,
+            gen_back: false,
             cut_clip: false,
             final_gen: Some(Box::new(FinalGenConf {
                 gen_svgs: true,

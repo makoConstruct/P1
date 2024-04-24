@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="32.185162mm"
+   height="39.994793mm"
+   viewBox="0 0 32.185161 39.994793"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.3.2 (091e20ef0f, 2023-11-25)"
+   sodipodi:docname="level1.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     inkscape:zoom="1.5429574"
+     inkscape:cx="123.14015"
+     inkscape:cy="193.78371"
+     inkscape:window-width="1896"
+     inkscape:window-height="1052"
+     inkscape:window-x="24"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs1" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <g
+       id="g1"
+       transform="translate(-37.041653,-121.17917)">
+      <rect
+         style="fill:#4b4947;fill-opacity:1;stroke-width:1.373;stroke-linecap:round;stroke-linejoin:round"
+         id="rect4"
+         width="32.185162"
+         height="39.994793"
+         x="37.041653"
+         y="121.17917"
+         rx="4.0231466"
+         ry="4.0231466" />
+      <text
+         xml:space="preserve"
+         style="font-weight:900;font-size:28.5234px;font-family:'Inter UI';-inkscape-font-specification:'Inter UI Heavy';fill:#d3d3d3;fill-opacity:0.988235;stroke:none;stroke-width:207.911;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1"
+         x="45.262173"
+         y="156.46091"
+         id="text2131-6"><tspan
+           sodipodi:role="line"
+           id="tspan2131-2"
+           style="font-style:normal;font-variant:normal;font-weight:600;font-stretch:normal;font-family:Rubik;-inkscape-font-specification:'Rubik Semi-Bold';fill:#d3d3d3;fill-opacity:0.988235;stroke:none;stroke-width:207.911"
+           x="45.262173"
+           y="156.46091">1</tspan></text>
+      <g
+         id="g2134-9"
+         transform="translate(-344.70826,-4406.3306)">
+        <text
+           xml:space="preserve"
+           style="font-weight:900;font-size:11.1088px;font-family:'Inter UI';-inkscape-font-specification:'Inter UI Heavy';fill:#d3d3d3;fill-opacity:0.988235;stroke:none;stroke-width:80.9724;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1"
+           x="383.3374"
+           y="4537.8184"
+           id="text2134-1"><tspan
+             sodipodi:role="line"
+             id="tspan2134-2"
+             style="font-style:normal;font-variant:normal;font-weight:600;font-stretch:normal;font-family:Rubik;-inkscape-font-specification:'Rubik Semi-Bold';fill:#d3d3d3;fill-opacity:0.988235;stroke:none;stroke-width:80.9724"
+             x="383.3374"
+             y="4537.8184">Level</tspan></text>
+      </g>
+    </g>
+  </g>
+</svg>
