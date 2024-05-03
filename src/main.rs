@@ -53,6 +53,7 @@ struct Conf {
     cut_clip: bool,
     final_gen: Option<Box<FinalGenConf>>,
     output: String,
+    check_frequencies: bool,
 }
 impl Default for Conf {
     fn default() -> Self {
@@ -63,6 +64,7 @@ impl Default for Conf {
             gen_back: true,
             cut_clip: false,
             final_gen: None,
+            check_frequencies: false,
             output: "generated_card_svgs".to_string(),
         }
     }
@@ -108,10 +110,18 @@ fn gen_cards(assets: &Rc<Assets>, conf: &Conf) {
         let final_means_pngs_path = Path::new("final_means_pngs");
         let final_ends_pngs_path = Path::new("final_ends_pngs");
         let final_land_pngs_path = Path::new("final_land_pngs");
+        let final_ends_hand_made_svgs_path = Path::new("hand_made_cards/ends");
+        let final_means_hand_made_svgs_path = Path::new("hand_made_cards/means");
         let final_surplus_land_svgs_path = Path::new("final_surplus_land_svgs");
         let final_surplus_land_pngs_path = Path::new("final_surplus_land_pngs");
 
-        fn do_cards(cardgens: &Vec<CardGen>, output_dir: &Path, conf: &Conf, rng: &mut StdRng) {
+        fn do_cards(
+            run_name: &str,
+            cardgens: &Vec<CardGen>,
+            output_dir: &Path,
+            conf: &Conf,
+            rng: &mut StdRng,
+        ) {
             //generate all possible cards
             prep_clear_dir(output_dir);
             let cards_by_kind: Vec<Vec<CardSpec>> = cardgens
@@ -133,42 +143,56 @@ fn gen_cards(assets: &Rc<Assets>, conf: &Conf) {
                     rng,
                 );
             }
-            // check frequencies, report imbalances and culprits
-            // field forest mountain volcano lake ice tomb void
-            let change_dist_preferred = normalize([0.9, 1.0, 0.85, 1.0, 1.5, 1.5, 1.0, 1.18]);
-            let mut change_dist_actual = [0.0; 8];
-            let kill_dist_preferred = normalize([0.6, 1.2, 1.15, 1.5, 0.85, 1.5, 0.5, 1.6]);
-            let mut kill_dist_actual = [0.0; 8];
-            for spec in cardspecs.iter() {
-                if let Some((_, es)) = spec.properties.iter().find(|e| e.0 == Change) {
-                    for e in elements().into_iter() {
-                        if es.contains(&e) {
-                            change_dist_actual[e] += 1.0;
+            if conf.check_frequencies {
+                // field forest mountain volcano lake ice tomb void
+                let change_dist_preferred = normalize([0.9, 1.0, 0.85, 1.0, 1.5, 1.5, 1.0, 1.18]);
+                let mut change_dist_actual = [0.0; 8];
+                let kill_dist_preferred = normalize([0.6, 1.2, 1.15, 1.5, 0.85, 1.5, 0.5, 1.6]);
+                let mut kill_dist_actual = [0.0; 8];
+                for spec in cardspecs.iter() {
+                    if let Some((_, es)) = spec.properties.iter().find(|e| e.0 == Change) {
+                        for e in elements().into_iter() {
+                            if es.contains(&e) {
+                                change_dist_actual[e] += 1.0;
+                            }
+                        }
+                    }
+                    if let Some((_, es)) = spec.properties.iter().find(|e| e.0 == Kill) {
+                        for e in elements().into_iter() {
+                            if es.contains(&e) {
+                                kill_dist_actual[e] += 1.0;
+                            }
                         }
                     }
                 }
-                if let Some((_, es)) = spec.properties.iter().find(|e| e.0 == Kill) {
-                    for e in elements().into_iter() {
-                        if es.contains(&e) {
-                            kill_dist_actual[e] += 1.0;
-                        }
+                for (e, (a, p)) in normalize(kill_dist_actual)
+                    .iter()
+                    .zip(kill_dist_preferred.iter())
+                    .enumerate()
+                {
+                    if (a - p).abs() >= p * 0.28 {
+                        let relation = if a - p > 0.0 { "higher" } else { "lower" };
+                        let en = ELEMENT_NAMES[e];
+                        println!("warning, ratio of kill cards that are {en}, {a}, is {relation} than expected ({p})");
+                    }
+                }
+                for (e, (a, p)) in normalize(change_dist_actual)
+                    .iter()
+                    .zip(change_dist_preferred.iter())
+                    .enumerate()
+                {
+                    if (a - p).abs() >= p * 0.28 {
+                        let relation = if a - p > 0.0 { "higher" } else { "lower" };
+                        let en = ELEMENT_NAMES[e];
+                        println!("warning, ratio of change cards that are {en}, {a}, is {relation} than expected ({p})");
                     }
                 }
             }
-            for (e, (a, p)) in normalize(kill_dist_actual).iter().zip(kill_dist_preferred.iter()).enumerate() {
-                if (a - p).abs() >= p*0.28 {
-                    let relation = if a - p > 0.0 { "higher" } else { "lower" };
-                    let en = ELEMENT_NAMES[e];
-                    println!("warning, ratio of kill cards that are {en}, {a}, is {relation} than expected ({p})");
-                }
-            }
-            for (e, (a, p)) in normalize(change_dist_actual).iter().zip(change_dist_preferred.iter()).enumerate() {
-                if (a - p).abs() >= p*0.28 {
-                    let relation = if a - p > 0.0 { "higher" } else { "lower" };
-                    let en = ELEMENT_NAMES[e];
-                    println!("warning, ratio of change cards that are {en}, {a}, is {relation} than expected ({p})");
-                }
-            }
+
+            println!(
+                "{run_name} count: {}",
+                cardspecs.iter().map(|s| s.repeat).sum::<usize>()
+            );
 
             for spec in cardspecs.iter() {
                 write_spec(spec, conf, output_dir);
@@ -176,15 +200,17 @@ fn gen_cards(assets: &Rc<Assets>, conf: &Conf) {
         }
 
         if fconf.gen_svgs {
-            do_cards(&ends_specs, final_ends_svgs_path, conf, &mut rng);
-            do_cards(&means_specs, final_means_svgs_path, conf, &mut rng);
+            do_cards("ends", &ends_specs, final_ends_svgs_path, conf, &mut rng);
+            do_cards("means", &means_specs, final_means_svgs_path, conf, &mut rng);
 
             // I changed my mind, not going to have a separate surplus land deck. There'll just be one deck and we'll instruct users to separate the surplus.
             // ack, as part of budgeting, we'll ignore the surplus_counts and just print the amount of excess that we can afford
             // let land_counts: Vec<u8> = fconf.land_counts.iter().zip(fconf.land_surplus_counts.iter()).map(|(a, b)| a + b).collect();
             let mut land_counts: Vec<u8> = fconf.land_counts.clone();
-            let cards_per_sheet: u8 = 12; //all that matters for cost is how many sheets you spend
-            let modu = land_counts.iter().sum::<u8>() % cards_per_sheet;
+            // let cards_per_sheet: u8 = 12; //all that matters for cost is how many sheets you spend
+            let cards_per_sheet: u8 = 60; //all that matters for cost is how many sheets you spend
+            let prevtotal = land_counts.iter().sum::<u8>();
+            let modu = prevtotal % cards_per_sheet;
             let mut free_cards = if modu == 0 { 0 } else { cards_per_sheet - modu }; //so we get these for free
             let mut ci = 0;
             while free_cards > 0 {
@@ -209,21 +235,37 @@ fn gen_cards(assets: &Rc<Assets>, conf: &Conf) {
             // }
         }
         if fconf.gen_pngs {
+            clear_or_create(final_ends_pngs_path);
             render_pngs_with_from_to(
                 final_ends_svgs_path,
                 final_ends_pngs_path,
                 default_svg_to_png,
             );
             render_pngs_with_from_to(
+                final_ends_hand_made_svgs_path,
+                final_ends_pngs_path,
+                default_svg_to_png,
+            );
+            
+            clear_or_create(final_means_pngs_path);
+            render_pngs_with_from_to(
                 final_means_svgs_path,
                 final_means_pngs_path,
                 default_svg_to_png,
             );
             render_pngs_with_from_to(
+                final_means_hand_made_svgs_path,
+                final_means_pngs_path,
+                default_svg_to_png,
+            );
+            
+            clear_or_create(final_land_pngs_path);
+            render_pngs_with_from_to(
                 final_land_svgs_path,
                 final_land_pngs_path,
                 default_svg_to_png,
             );
+            clear_or_create(final_surplus_land_pngs_path);
             render_pngs_with_from_to(
                 final_surplus_land_svgs_path,
                 final_surplus_land_pngs_path,
@@ -346,9 +388,9 @@ fn render_pngs_with(renderer: fn(&Path, &Path, &Database)) {
     let from = Path::new("generated_card_svgs");
     render_pngs_with_from_to(from, to, renderer);
 }
-fn render_pngs_with_from_to(from: &Path, to: &Path, renderer: fn(&Path, &Path, &Database)) {
-    //clear dir if present
-    if let Ok(dens) = read_dir(&to) {
+
+fn clear_or_create(path: &Path) {
+    if let Ok(dens) = read_dir(&path) {
         for item_m in dens {
             if let Ok(item) = item_m {
                 remove_file(item.path()).unwrap();
@@ -356,9 +398,13 @@ fn render_pngs_with_from_to(from: &Path, to: &Path, renderer: fn(&Path, &Path, &
         }
     } else {
         //create otherwise
-        drop(create_dir(&to));
+        drop(create_dir(&path));
     }
+}
 
+fn render_pngs_with_from_to(from: &Path, to: &Path, renderer: fn(&Path, &Path, &Database)) {
+    //clear dir if present
+    
     let fonts = get_fonts();
 
     for item_m in read_dir(&from).unwrap() {
@@ -380,16 +426,15 @@ fn main() {
         &Conf {
             output: "generated_card_svgs".to_string(),
             seed: 879,
-            gen_count: 4,
             gen_front: true,
-            gen_back: false,
-            cut_clip: false,
+            gen_back: true,
+            // final_gen: None,
             final_gen: Some(Box::new(FinalGenConf {
                 gen_svgs: true,
-                gen_pngs: false,
+                gen_pngs: true,
                 ..FinalGenConf::default()
             })),
-            // final_gen: None,
+            ..Conf::default()
         },
     );
     // svg_to_png_using_resvg(&Path::new("simple-case.svg"), &Path::new(""), &get_fonts())

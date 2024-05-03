@@ -26,7 +26,7 @@ pub fn end_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                         (ELEMENT_G[e])(END_GRAPHIC_CENTER, 1.0, w)
                     })),
                     scores.clone(),
-                    2,
+                    1,
                     format!("{} point for every {}", &scores, ELEMENT_NAMES[e]),
                     vec![e],
                     1,
@@ -39,25 +39,50 @@ pub fn end_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
     specs.push(CardGen {
         min_count: 19,
         desired_proportion: 0.0,
-        generator: Box::new(IndexVec(vec![(MOUNTAIN, TOMB), (MOUNTAIN, LAKE), (ICE, TOMB), (LAKE, TOMB), (FOREST, ICE), (FIELD, VOLCANO), (FIELD, FOREST)]).into_map({
-            let all_assets = all_assets.clone();
-            move |(e1, e2)| {
-                CardSpec::end_card_with_back_blurred_message(
-                    &all_assets,
-                    format!("adjacent_{}_{}", ELEMENT_NAMES[e1], ELEMENT_NAMES[e2]),
-                    Rc::new(Displaying(move |w| paired(e1, e2, false, w))),
-                    "2".to_string(),
-                    1,
-                    format!(
-                        "2 points for every adjacent pairing of {} and {}",
-                        ELEMENT_NAMES[e1], ELEMENT_NAMES[e2]
-                    ),
-                    vec![e1, e2],
-                    0,
-                    false,
-                )
-            }
-        })),
+        generator: Box::new(
+            IndexVec(vec![
+                (FIELD, TOMB),
+                (MOUNTAIN, LAKE),
+                (LAKE, TOMB),
+                (FOREST, ICE),
+                (FIELD, VOLCANO),
+                (FIELD, FOREST),
+                (MOUNTAIN, FIELD),
+            ])
+            .into_map({
+                let all_assets = all_assets.clone();
+                move |(e1, e2)| {
+                    CardSpec::end_card_with_back_blurred_message(
+                        &all_assets,
+                        format!("adjacent_{}_{}", ELEMENT_NAMES[e1], ELEMENT_NAMES[e2]),
+                        // Rc::new(Displaying(move |w| paired(e1, e2, false, w))),
+                        Rc::new(Displaying({
+                            let bounds = end_graphic_usual_bounds_shrunk_appropriately();
+                            let assets = all_assets.clone();
+                            move |w| {
+                                pair_graphic(
+                                    &assets,
+                                    e1,
+                                    e2,
+                                    bounds.center(),
+                                    bounds.span().x / 2.0,
+                                    w,
+                                )
+                            }
+                        })),
+                        "2".to_string(),
+                        1,
+                        format!(
+                            "2 points for every adjacent pairing of {} and {}",
+                            ELEMENT_NAMES[e1], ELEMENT_NAMES[e2]
+                        ),
+                        vec![e1, e2],
+                        0,
+                        false,
+                    )
+                }
+            }),
+        ),
     });
 
     specs.push(CardGen {
@@ -66,21 +91,29 @@ pub fn end_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
         generator: Box::new(IndexVec(vec![VOLCANO, VOID, LAKE]).into_map({
             let all_assets = all_assets.clone();
             move |e| {
-                let scores = "6".to_string();
+                let scores = "9".to_string();
                 let ename = ELEMENT_NAMES[e];
                 CardSpec::end_card_with_back_blurred_message(
                     &all_assets,
                     format!("just_1_{}", ename),
-                    Rc::new(Displaying({let all_assets = all_assets.clone(); move |w| {
-                        let bounds = end_graphic_usual_bounds_shrunk_appropriately();
-                        let sc = bounds.span().x;
-                        let er = sc*0.35;
-                        let hspan = sc*0.65;
-                        let b = bounds.grav_point(MIDDLE_BOTTOM) + V2::new(0.0, -sc*0.06);
-                        let linel = hspan*0.3;
-                        all_assets.element(e).by_grav_rad(b + V2::new(0.0, -(linel + er)), MIDDLE_MIDDLE, er, w);
-                        underline(element_colors_bold(e), b, MIDDLE_BOTTOM, hspan, w);
-                    }})),
+                    Rc::new(Displaying({
+                        let all_assets = all_assets.clone();
+                        move |w| {
+                            let bounds = end_graphic_usual_bounds_shrunk_appropriately();
+                            let sc = bounds.span().x;
+                            let er = sc * 0.35;
+                            let hspan = sc * 0.65;
+                            let b = bounds.grav_point(MIDDLE_BOTTOM) + V2::new(0.0, -sc * 0.06);
+                            let linel = hspan * 0.3;
+                            all_assets.element(e).by_grav_rad(
+                                b + V2::new(0.0, -(linel + er)),
+                                MIDDLE_MIDDLE,
+                                er,
+                                w,
+                            );
+                            underline(element_colors_bold(e), b, MIDDLE_BOTTOM, hspan, w);
+                        }
+                    })),
                     scores.clone(),
                     1,
                     format!(
@@ -94,99 +127,154 @@ pub fn end_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
             }
         })),
     });
-    
+
+    specs.push(CardGen {
+        min_count: 8,
+        desired_proportion: 0.0,
+        generator: Box::new(IndexVec(vec![(MOUNTAIN, FIELD, LAKE), (FIELD, TOMB, FIELD), (LAKE, ICE, LAKE), (VOLCANO, VOLCANO, FOREST), (VOID, MOUNTAIN, TOMB)]).into_map({
+            let all_assets = all_assets.clone();
+            move |(a,b,c)| {
+                let aname = ELEMENT_NAMES[a];
+                let bname = ELEMENT_NAMES[b];
+                let cname = ELEMENT_NAMES[c];
+                let scores = "3".to_string();
+                CardSpec::end_card_with_back_blurred_message(
+                    &all_assets,
+                    format!("chain {aname} {bname} {cname}"),
+                    Rc::new(Displaying({
+                        let all_assets = all_assets.clone();
+                        move |w| {
+                            let bounds = end_graphic_usual_bounds_shrunk_appropriately();
+                            chain_graphic(&all_assets, a, b, c, bounds.center(), bounds.span().x/2.0, w);
+                        }
+                    })),
+                    scores.clone(),
+                    1,
+                    format!(
+                        "{} points for each chain of {aname}, {bname}, {cname}. the chains don't overlap.",
+                        &scores
+                    ),
+                    vec![a,b,c],
+                    2,
+                    false,
+                )
+            }
+        })),
+    });
+
     specs.push(CardGen {
         min_count: 8,
         desired_proportion: 0.0,
         generator: Box::new(IndexVec(vec![FIELD, LAKE, FOREST]).into_map({
             let all_assets = all_assets.clone();
             move |e| {
-                let scores = "5".to_string();
+                let scores = "10".to_string();
                 let ename_plural = ELEMENT_NAMES_PLURAL[e];
                 let ename = ELEMENT_NAMES[e];
                 CardSpec::end_card_with_back_blurred_message(
                     &all_assets,
                     format!("just_2_{}", ename),
-                    Rc::new(Displaying({let all_assets = all_assets.clone(); move |w| {
-                        let bounds = end_graphic_usual_bounds_shrunk_appropriately();
-                        let sc = bounds.span().x;
-                        let er = sc*0.23;
-                        let hspan = sc*0.65;
-                        let linel = hspan*0.3;
-                        let sep = linel*0.6;
-                        let out = sep/2.0 + er;
-                        let b = bounds.grav_point(MIDDLE_BOTTOM) + V2::new(0.0, -sc*0.155);
-                        all_assets.element(e).by_grav_rad(b + V2::new( out, -(linel + er)), MIDDLE_MIDDLE, er, w);
-                        all_assets.element(e).by_grav_rad(b + V2::new(-out, -(linel + er)), MIDDLE_MIDDLE, er, w);
-                        underline(element_colors_bold(e), b, MIDDLE_BOTTOM, hspan, w);
-                    }})),
+                    Rc::new(Displaying({
+                        let all_assets = all_assets.clone();
+                        move |w| {
+                            let bounds = end_graphic_usual_bounds_shrunk_appropriately();
+                            let sc = bounds.span().x;
+                            let er = sc * 0.23;
+                            let hspan = sc * 0.65;
+                            let linel = hspan * 0.3;
+                            let sep = linel * 0.6;
+                            let out = sep / 2.0 + er;
+                            let b = bounds.grav_point(MIDDLE_BOTTOM) + V2::new(0.0, -sc * 0.155);
+                            all_assets.element(e).by_grav_rad(
+                                b + V2::new(out, -(linel + er)),
+                                MIDDLE_MIDDLE,
+                                er,
+                                w,
+                            );
+                            all_assets.element(e).by_grav_rad(
+                                b + V2::new(-out, -(linel + er)),
+                                MIDDLE_MIDDLE,
+                                er,
+                                w,
+                            );
+                            underline(element_colors_bold(e), b, MIDDLE_BOTTOM, hspan, w);
+                        }
+                    })),
                     scores.clone(),
-                    0,
+                    1,
                     format!(
                         "{} points as long as there are exactly 2 {ename_plural} at the end",
                         &scores
                     ),
                     vec![e],
-                    1,
+                    0,
                     false,
                 )
             }
         })),
     });
-    
+
     specs.push(CardGen {
         min_count: 3,
         desired_proportion: 0.0,
-        generator: Box::new(IndexVec(vec![(TOMB, VOLCANO, ICE), (LAKE, LAKE, MOUNTAIN), (VOLCANO, LAKE, FIELD)]).into_map({
-            let all_assets = all_assets.clone();
-            move |(e1, e2, e3)| {
-                let tilt = -TAU / 24.0;
-                let arc = TAU / 3.0;
-                let r = GRAPHIC_RAD * 0.48;
-                let scale = 0.5;
+        generator: Box::new(
+            IndexVec(vec![
+                (TOMB, VOLCANO, ICE),
+                (LAKE, LAKE, MOUNTAIN),
+                (VOLCANO, LAKE, FIELD),
+                (MOUNTAIN, FOREST, VOLCANO),
+            ])
+            .into_map({
+                let all_assets = all_assets.clone();
+                move |(e1, e2, e3)| {
+                    let tilt = -TAU / 24.0;
+                    let arc = TAU / 3.0;
+                    let r = GRAPHIC_RAD * 0.48;
+                    let scale = 0.5;
 
-                let scores = "4".to_string();
+                    let scores = "4".to_string();
 
-                CardSpec::end_card_with_back_blurred_message(
-                    &all_assets,
-                    format!(
-                        "triple_{}_{}_{}",
-                        ELEMENT_NAMES[e1], ELEMENT_NAMES[e2], ELEMENT_NAMES[e3]
-                    ),
-                    Rc::new(Displaying(move |w| {
-                        write!(
-                            w,
-                            "{}{}{}",
-                            &Displaying(|w: &mut dyn Write| ELEMENT_G[e1](
-                                END_GRAPHIC_CENTER + from_angle_mag(tilt, r),
-                                scale,
-                                w
-                            )),
-                            &Displaying(|w: &mut dyn Write| ELEMENT_G[e2](
-                                END_GRAPHIC_CENTER + from_angle_mag(tilt + arc, r),
-                                scale,
-                                w
-                            )),
-                            &Displaying(|w: &mut dyn Write| ELEMENT_G[e3](
-                                END_GRAPHIC_CENTER + from_angle_mag(tilt + arc * 2.0, r),
-                                scale,
-                                w
-                            )),
-                        )
-                        .unwrap();
-                    })),
-                    scores.clone(),
-                    1,
-                    format!(
-                        "{} points for every trio of adjacent {}, {} and {}",
-                        &scores, ELEMENT_NAMES[e1], ELEMENT_NAMES[e2], ELEMENT_NAMES[e3]
-                    ),
-                    vec![e1, e2, e3],
-                    0,
-                    true,
-                )
-            }
-        })),
+                    CardSpec::end_card_with_back_blurred_message(
+                        &all_assets,
+                        format!(
+                            "triple_{}_{}_{}",
+                            ELEMENT_NAMES[e1], ELEMENT_NAMES[e2], ELEMENT_NAMES[e3]
+                        ),
+                        Rc::new(Displaying(move |w| {
+                            write!(
+                                w,
+                                "{}{}{}",
+                                &Displaying(|w: &mut dyn Write| ELEMENT_G[e1](
+                                    END_GRAPHIC_CENTER + from_angle_mag(tilt, r),
+                                    scale,
+                                    w
+                                )),
+                                &Displaying(|w: &mut dyn Write| ELEMENT_G[e2](
+                                    END_GRAPHIC_CENTER + from_angle_mag(tilt + arc, r),
+                                    scale,
+                                    w
+                                )),
+                                &Displaying(|w: &mut dyn Write| ELEMENT_G[e3](
+                                    END_GRAPHIC_CENTER + from_angle_mag(tilt + arc * 2.0, r),
+                                    scale,
+                                    w
+                                )),
+                            )
+                            .unwrap();
+                        })),
+                        scores.clone(),
+                        1,
+                        format!(
+                            "{} points for every trio of adjacent {}, {} and {}",
+                            &scores, ELEMENT_NAMES[e1], ELEMENT_NAMES[e2], ELEMENT_NAMES[e3]
+                        ),
+                        vec![e1, e2, e3],
+                        0,
+                        false,
+                    )
+                }
+            }),
+        ),
     });
 
     specs.push(CardGen { min_count: 2, desired_proportion: 0.0, generator: Box::new(IndexVec(vec![(ICE, FIELD, TOMB), (VOLCANO, FIELD, FOREST)]).into_map({
@@ -196,7 +284,7 @@ pub fn end_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
             let e3np = ELEMENT_NAMES_PLURAL[e3];
             let eroadn = ELEMENT_NAMES[eroad];
 
-            let scores = "1".to_string();
+            let scores = "×".to_string();
 
             CardSpec::end_card_with_back_blurred_message(
                 &all_assets,
@@ -219,7 +307,7 @@ pub fn end_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
         }
     }))});
 
-    specs.push(CardGen { min_count: 8, desired_proportion: 0.0, generator: Box::new(IndexVec(vec![VOID, FOREST]).into_map({let all_assets = all_assets.clone(); move|e|{
+    specs.push(CardGen { min_count: 8, desired_proportion: 0.0, generator: Box::new(IndexVec(vec![VOID, FOREST, VOLCANO]).into_map({let all_assets = all_assets.clone(); move|e|{
         let element_name = ELEMENT_NAMES[e];
         let element_name_plural = ELEMENT_NAMES_PLURAL[e];
         CardSpec::end_card_with_back_blurred_message(
@@ -282,93 +370,179 @@ pub fn end_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
     specs.push(CardGen {
         min_count: 13,
         desired_proportion: 0.0,
-        generator: Box::new(IndexVec(vec![(LAKE, TOMB), (TOMB, VOID), (VOLCANO, ICE)]).into_map({
-            let all_assets = all_assets.clone();
-            move |(e1, e2)| {
-                let scores = "9".to_string();
-                let en1 = ELEMENT_NAMES[e1];
-                let en1_plural = ELEMENT_NAMES_PLURAL[e1];
-                let en2 = ELEMENT_NAMES[e2];
-                let en2p = ELEMENT_NAMES_PLURAL[e2];
-                CardSpec::end_card_with_back_blurred_message(
-                    &all_assets,
-                    format!("forbid_{en1}_{en2}"),
-                    Rc::new(Displaying({
-                        let assets = all_assets.clone();
-                        move |w: &mut dyn Write| {
-                            paired(e1, e2, true, w);
-                            assets.negatory.centered_rad(
-                                end_graphic_usual_bounds().center(),
-                                BIG_ELEMENT_RAD * 0.74,
-                                w,
-                            );
-                            // negatory(w);
-                        }
-                    })),
-                    scores.clone(),
-                    1,
-                    format!(
-                        "{} as long as there are no {en1_plural} adjacent to {en2p} at the end",
-                        &scores
-                    ),
-                    vec![opposite_element(e1), opposite_element(e2)],
-                    2,
-                    false,
-                )
-            }
-        })),
+        generator: Box::new(
+            IndexVec(vec![
+                (LAKE, TOMB),
+                (TOMB, VOID),
+                (VOLCANO, ICE),
+                (VOLCANO, VOID),
+                (LAKE, FIELD),
+                (LAKE, VOID),
+                (MOUNTAIN, MOUNTAIN),
+            ])
+            .into_map({
+                let all_assets = all_assets.clone();
+                move |(e1, e2)| {
+                    let scores = "8".to_string();
+                    let en1 = ELEMENT_NAMES[e1];
+                    let en1_plural = ELEMENT_NAMES_PLURAL[e1];
+                    let en2 = ELEMENT_NAMES[e2];
+                    let en2p = ELEMENT_NAMES_PLURAL[e2];
+                    CardSpec::end_card_with_back_blurred_message(
+                        &all_assets,
+                        format!("forbid_{en1}_{en2}"),
+                        Rc::new(Displaying({
+                            let assets = all_assets.clone();
+                            move |w: &mut dyn Write| {
+                                paired(e1, e2, true, w);
+                                assets.negatory.centered_rad(
+                                    end_graphic_usual_bounds().center(),
+                                    BIG_ELEMENT_RAD * 0.74,
+                                    w,
+                                );
+                                // negatory(w);
+                            }
+                        })),
+                        scores.clone(),
+                        1,
+                        format!(
+                            "{} as long as there are no {en1_plural} adjacent to {en2p} at the end",
+                            &scores
+                        ),
+                        vec![opposite_element(e1), opposite_element(e2)],
+                        0,
+                        false,
+                    )
+                }
+            }),
+        ),
     });
 
     specs.push(CardGen {
         min_count: 8,
         desired_proportion: 0.0,
-        generator: Box::new(IndexVec(vec![(VOLCANO, TOMB), (MOUNTAIN, VOLCANO), (VOLCANO, ICE), (LAKE, FOREST)]).into_map({
-            let assets = all_assets.clone();
-            move |(e1, e2)| {
-                let scores = "3".to_string();
-                let en1 = ELEMENT_NAMES[e1];
-                let en2 = ELEMENT_NAMES[e2];
-                CardSpec::end_card_with_back_blurred_message(
-                    &assets,
-                    format!("without {en2} {en1}"),
-                    Rc::new(Displaying({
-                        let assets = assets.clone();
-                        move |w: &mut dyn Write| {
-                            let bounds = end_graphic_usual_bounds_shrunk_appropriately();
-                            let e1a = assets.element(e1);
-                            let e2a = assets.element(e2);
-                            let negatory = &assets.negatory;
-                            let er = e1a.bounds.min() / 2.0;
-                            let sep = er * 0.23;
-                            let our = er * 0.57;
-                            let negatory_scale = our / er;
-                            let arc = er + sep + our;
-                            let d = er - our;
-                            let ad = (arc * arc - d * d).sqrt();
-                            let total_height = er + ad + our;
-                            let total_scale = bounds.span().y / total_height;
-                            let e1c = V2::new(er, er);
-                            let e2c = V2::new(er * 2.0 - our, er + ad);
-                            let offset =
-                                bounds.center() + V2::new(-er, -total_height / 2.0) * total_scale;
-                            e1a.centered_rad(offset + e1c * total_scale, er * total_scale, w);
-                            e2a.centered_rad(offset + e2c * total_scale, our * total_scale, w);
-                            negatory.centered(
-                                offset + e2c * total_scale,
-                                negatory_scale * total_scale,
-                                w,
-                            );
-                        }
-                    })),
-                    scores.clone(),
-                    1,
-                    format!("{scores} points per {en1} that is not adjacent to {en2}",),
-                    vec![e1, opposite_element(e2)],
-                    0,
-                    false,
-                )
-            }
-        })),
+        generator: Box::new(
+            IndexVec(vec![
+                (MOUNTAIN, TOMB),
+                (MOUNTAIN, FIELD),
+                (TOMB, FOREST),
+                (ICE, VOLCANO),
+                (VOLCANO, LAKE),
+                (LAKE, FOREST),
+            ])
+            .into_map({
+                let assets = all_assets.clone();
+                move |(e1, e2)| {
+                    let scores = "3".to_string();
+                    let en1 = ELEMENT_NAMES[e1];
+                    let en2 = ELEMENT_NAMES[e2];
+                    CardSpec::end_card_with_back_blurred_message(
+                        &assets,
+                        format!("without {en2} {en1}"),
+                        Rc::new(Displaying({
+                            let assets = assets.clone();
+                            move |w: &mut dyn Write| {
+                                let bounds = end_graphic_usual_bounds_shrunk_appropriately();
+                                let e1a = assets.element(e1);
+                                let e2a = assets.element(e2);
+                                let negatory = &assets.negatory;
+                                let er = e1a.bounds.min() / 2.0;
+                                let sep = er * 0.23;
+                                let our = er * 0.57;
+                                let negatory_scale = our / er;
+                                let arc = er + sep + our;
+                                let d = er - our;
+                                let ad = (arc * arc - d * d).sqrt();
+                                let total_height = er + ad + our;
+                                let total_scale = bounds.span().y / total_height;
+                                let e1c = V2::new(er, er);
+                                let e2c = V2::new(er * 2.0 - our, er + ad);
+                                let offset = bounds.center()
+                                    + V2::new(-er, -total_height / 2.0) * total_scale;
+                                e1a.centered_rad(offset + e1c * total_scale, er * total_scale, w);
+                                e2a.centered_rad(offset + e2c * total_scale, our * total_scale, w);
+                                negatory.centered(
+                                    offset + e2c * total_scale,
+                                    negatory_scale * total_scale,
+                                    w,
+                                );
+                            }
+                        })),
+                        scores.clone(),
+                        1,
+                        format!("{scores} points per {en1} that is not adjacent to {en2}",),
+                        vec![e1, opposite_element(e2)],
+                        0,
+                        false,
+                    )
+                }
+            }),
+        ),
+    });
+
+    specs.push(CardGen {
+        min_count: 8,
+        desired_proportion: 0.0,
+        generator:
+            Box::new(
+                IndexVec(vec![
+                    (VOLCANO, ICE, VOID),
+                    (MOUNTAIN, FOREST, LAKE),
+                    (TOMB, FOREST, ICE),
+                    (ICE, LAKE, FOREST),
+                    (FOREST, MOUNTAIN, FOREST),
+                ])
+                .into_map({
+                    let assets = all_assets.clone();
+                    move |(e1, e2, e3)| {
+                        let scores = "5".to_string();
+                        let en1 = ELEMENT_NAMES[e1];
+                        let en2 = ELEMENT_NAMES[e2];
+                        let en3 = ELEMENT_NAMES[e3];
+                        CardSpec::end_card_with_back_blurred_message(
+                            &assets,
+                            format!("without {en1} {en2} {en3}"),
+                            Rc::new(Displaying({
+                                let assets = assets.clone();
+                                move |w: &mut dyn Write| {
+                                    let bounds = end_graphic_usual_bounds_shrunk_appropriately();
+                                    let e1a = assets.element(e1);
+                                    let e2a = assets.element(e2);
+                                    let e3a = assets.element(e3);
+                                    let negatory = &assets.negatory;
+
+                                    let bs = bounds.span();
+                                    // i initially tried to calculate these by just defining the ratio and asking claude to simplify the formula but it didn't work
+                                    // //clopus generated this
+                                    // let a = bs.x + (bs.y - bs.x)*ratio;
+                                    // let cr = -a/2.0 + ((a*a - 20.0*bs.x*bs.x + 4.0*bs.y*bs.y) / 4.0).sqrt();
+                                    // // nope, didn't work
+                                    let sm = bs.x * 0.158;
+                                    let sep = sm * 0.3;
+                                    let len = (bs - both_dims(sm * 2.0)).magnitude();
+                                    let cr = (len - 2.0 * (sm + sep)) / 2.0;
+                                    let e2c = bounds.ul + both_dims(sm);
+                                    let e3c = bounds.br - both_dims(sm);
+                                    e2a.centered_rad(e2c, sm, w);
+                                    e3a.centered_rad(e3c, sm, w);
+                                    let neg_rad = 0.8 * sm;
+                                    negatory.centered_rad(e2c, neg_rad, w);
+                                    negatory.centered_rad(e3c, neg_rad, w);
+                                    e1a.centered_rad(bounds.center(), cr, w);
+                                }
+                            })),
+                            scores.clone(),
+                            1,
+                            format!(
+                                "{scores} points per {en1} that is not adjacent to {en2} or {en3}",
+                            ),
+                            vec![e1, opposite_element(e2)],
+                            2,
+                            false,
+                        )
+                    }
+                }),
+            ),
     });
 
     fn from_asset(
@@ -422,7 +596,13 @@ pub fn end_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
         desired_proportion: 0.0,
         generator: Box::new({
             let assets = all_assets.clone();
-            IndexVec(vec![(FOREST, ICE), (MOUNTAIN, FOREST), (LAKE, VOID)]).into_map(move |(e1, e2)| {
+            IndexVec(vec![
+                (FIELD, ICE),
+                (MOUNTAIN, FOREST),
+                (FIELD, VOID),
+                (VOLCANO, LAKE),
+            ])
+            .into_map(move |(e1, e2)| {
                 let e1n = ELEMENT_NAMES[e1];
                 let e2n = ELEMENT_NAMES[e2];
                 CardSpec::end_card_with_back_blurred_message(
@@ -476,7 +656,7 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
     let all_assets = all_assets.clone();
     let mut r: Vec<CardGen> = Vec::new();
 
-    r.push(CardGen { min_count: 8, desired_proportion: 0.0, generator: Box::new(IndexVec(vec![FOREST, VOID, ICE, MOUNTAIN, VOLCANO]).into_map({let assets = all_assets.clone(); move|e|{
+    r.push(CardGen { min_count: 8, desired_proportion: 0.0, generator: Box::new(IndexVec(vec![FOREST, MOUNTAIN]).into_map({let assets = all_assets.clone(); move|e|{
         let bounds = means_graphic_usual_bounds();
         let element_name = ELEMENT_NAMES[e];
         CardSpec::means_card(
@@ -538,7 +718,7 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
         )
     }}))});
 
-    r.push(CardGen { min_count: 8, desired_proportion: 0.0, generator: Box::new(elements().into_map({
+    r.push(CardGen { min_count: 8, desired_proportion: 0.0, generator: Box::new(IndexVec(vec![TOMB, MOUNTAIN]).into_map({
         let all_assets = all_assets.clone();
         move |e| {
             let element_name = ELEMENT_NAMES[e];
@@ -568,7 +748,61 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
             )
         }
     }))});
-    
+
+    r.push(CardGen { min_count: 8, desired_proportion: 0.0, generator: Box::new(IndexVec(vec![(VOLCANO, FOREST), (MOUNTAIN, LAKE), (FIELD, VOLCANO), (MOUNTAIN, VOID)]).into_map({
+        let all_assets = all_assets.clone();
+        move |(se, re)| {
+            let ring_name = ELEMENT_NAMES[re];
+            let ring_opposite_name_plural = ELEMENT_NAMES_PLURAL[opposite_element(re)];
+            let support_opposite_name = ELEMENT_NAMES[opposite_element(se)];
+            CardSpec::means_card(
+                &all_assets,
+                format!("bloom {ring_name}"),
+                None,
+                0, false, 1,
+                vec![(Change, vec![se, re])],
+                Rc::new({
+                    let assets = all_assets.clone();
+                    move |w| {
+                        let bounds = means_graphic_usual_bounds_shrunk_appropriately();
+                        let sd = bounds.span().x;
+                        let center = bounds.center();
+                        ring_conversion(center, sd/2.0, assets.flip_to(se), ELEMENT_COLORS_BACK[re], assets.flip_to(re), w);
+                        assets.guy2.by_anchor_rad(center, sd*0.13, w);
+                    }
+                }),
+                format!("on or adjacent to {support_opposite_name}, flip it, and flip any of the {ring_opposite_name_plural} around you"),
+            )
+        }
+    }))});
+
+    r.push(CardGen { min_count: 8, desired_proportion: 0.0, generator: Box::new(IndexVec(vec![(FIELD, FIELD), (LAKE, TOMB)]).into_map({
+        let all_assets = all_assets.clone();
+        move |(se, re)| {
+            let ring_name = ELEMENT_NAMES[re];
+            let ring_opposite_name_plural = ELEMENT_NAMES_PLURAL[opposite_element(re)];
+            let support_opposite_name = ELEMENT_NAMES[opposite_element(se)];
+            CardSpec::means_card(
+                &all_assets,
+                format!("bloom {ring_name}"),
+                None,
+                0, false, 1,
+                vec![(Change, vec![se, re])],
+                Rc::new({
+                    let assets = all_assets.clone();
+                    move |w| {
+                        let bounds = means_graphic_usual_bounds_shrunk_appropriately();
+                        let sd = bounds.span().x;
+                        let center = bounds.center();
+                        ring_conversion(center, sd/2.0, assets.element(se), ELEMENT_COLORS_BACK[re], assets.flip_to(re), w);
+                        assets.guy2.by_anchor_rad(center, sd*0.13, w);
+                    }
+                }),
+                format!("on or adjacent to {support_opposite_name}, flip all of the {ring_opposite_name_plural} around you"),
+            )
+        }
+    }))});
+
     r.push(CardGen { min_count: 8, desired_proportion: 0.0, generator: Box::new(IndexVec(vec![(TOMB, FIELD), (MOUNTAIN, MOUNTAIN)]).into_map({
     let all_assets = all_assets.clone();
     move |(a,b)| {
@@ -578,7 +812,7 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
             &all_assets,
             format!("prism"),
             Some(format!("prism {an} {bn}")),
-            1, false, 1,
+            0, false, 1,
             vec![(Change, vec![])],
             Rc::new({
                 let assets = all_assets.clone();
@@ -610,9 +844,8 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
             format!("standing on or adjacent to a pair of {an} and {bn}, the land on either side of the pair can be flipped"),
         )
     }}))});
-    
-    
-    r.push(CardGen { min_count: 19, desired_proportion: 0.0, generator: Box::new(IndexVec(vec![((FIELD, FOREST), TOMB), ((FIELD, FOREST), FOREST), ((MOUNTAIN, VOLCANO), LAKE), ((TOMB, VOID), ICE), ((LAKE, ICE), MOUNTAIN)]).into_map({
+
+    r.push(CardGen { min_count: 19, desired_proportion: 0.0, generator: Box::new(IndexVec(vec![((FIELD, FOREST), TOMB), ((FIELD, FOREST), FOREST), ((MOUNTAIN, VOLCANO), LAKE), ((LAKE, ICE), VOID), ((LAKE, ICE), MOUNTAIN)]).into_map({
         let all_assets = all_assets.clone();
         move |((e, o), supporting_element)| {
             let element_name = ELEMENT_NAMES[e];
@@ -643,9 +876,8 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
             )
         }
     }))});
-    
-    
-    r.push(CardGen { min_count: 19, desired_proportion: 0.0, generator: Box::new(IndexVec(vec![(FIELD, TOMB), (FIELD, FIELD), (VOLCANO, VOLCANO), (FIELD, ICE), (VOLCANO, FOREST)]).into_map({
+
+    r.push(CardGen { min_count: 19, desired_proportion: 0.0, generator: Box::new(IndexVec(vec![(VOLCANO, VOLCANO), (LAKE, FOREST)]).into_map({
         let all_assets = all_assets.clone();
         move |(e, supporting_element)| {
             let element_name = ELEMENT_NAMES[e];
@@ -724,7 +956,7 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
     r.push(CardGen {
         min_count: 8,
         desired_proportion: 0.0,
-        generator: Box::new(IndexVec(vec![VOLCANO, ICE]).into_map({
+        generator: Box::new(IndexVec(vec![ICE]).into_map({
             let assets = all_assets.clone();
             move |e| {
                 let enp = ELEMENT_NAMES_PLURAL[e];
@@ -777,7 +1009,7 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
         )
     }}))});
 
-    r.push(CardGen { min_count: 8, desired_proportion: 0.0, generator: Box::new(IndexVec(vec![(TOMB, ICE), (FOREST, FOREST)]).into_map({let assets=all_assets.clone(); move |(ek, es)|{
+    r.push(CardGen { min_count: 8, desired_proportion: 0.0, generator: Box::new(IndexVec(vec![(TOMB, ICE)]).into_map({let assets=all_assets.clone(); move |(ek, es)|{
         let ekn = ELEMENT_NAMES[ek];
         let esn = ELEMENT_NAMES[es];
         CardSpec::means_card(
@@ -805,7 +1037,7 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
             format!("standing in {ekn}, adjacent to {esn}, kill an agent within two land tiles of where you stand."),
         )
     }}))});
-    
+
     r.push(CardGen { min_count: 8, desired_proportion: 0.0, generator: Box::new(IndexVec(vec![(ICE, ICE), (VOLCANO, VOID)]).into_map({let assets=all_assets.clone(); move |(ek, es)|{
         let ekn = ELEMENT_NAMES[ek];
         let est = opposite_element(es);
@@ -837,47 +1069,119 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
         )
     }}))});
 
-    r.push(CardGen { min_count: 5, desired_proportion: 0.0, generator: Box::new(IndexVec(vec![(MOUNTAIN, FOREST), (TOMB, LAKE)]).into_map({let assets=all_assets.clone(); move |(ek, es)|{
-        let ekn = ELEMENT_NAMES[ek];
-        let esn = ELEMENT_NAMES[es];
-        CardSpec::means_card(
-            &assets,
-            format!("domain"),
-            Some(format!("domain {ekn} {esn}")),
-            0, true, 1,
-            vec![],
-            Rc::new({let asset = assets.clone(); move |w| {
-                let bounds = means_graphic_usual_bounds_shrunk_appropriately();
-                let sd = bounds.span().min();
-                let br = sd*0.3;
-                let sep = br*0.15;
-                let bc = bounds.center();
-                let hr = br * 0.24;
-                let hrs = hr*0.3;
-                let mut hs = HexSpiral::new().layer_iter(2);
-                hs.next();
-                let mut cur_layer = hs.0.layer;
-                let mut i = 0;
-                let mut el_pos = None;
-                while let Some(c) = hs.next() {
-                    let first_layer_distance = br + sep + hr + (cur_layer - 1) as f64*(hr*2.0 + sep);
-                    let spacing = first_layer_distance / (cur_layer as f64);
-                    let p = bc + hexify(c.to_v2())*spacing;
-                    if i == 1 {
-                        el_pos = Some(p);
-                    } else{
-                        asset.darker_blank.centered_rad(p, hrs, w);
-                    }
-                    cur_layer = hs.0.layer;
-                    i += 1;
-                }
-                asset.element(es).centered_rad(el_pos.unwrap(), hr*2.3, w);
-                asset.element(ek).centered_rad(bc, br, w);
-                guy2(&asset, bc, 1.0, w);
-            }}),
-            format!("standing in {ekn} adjacent to {esn}, flip a land within a 2 land radius."),
-        )
-    }}))});
+    r.push(CardGen {
+        min_count: 5,
+        desired_proportion: 0.0,
+        generator: Box::new(IndexVec(vec![(TOMB, LAKE)]).into_map({
+            let assets = all_assets.clone();
+            move |(ek, es)| {
+                let ekn = ELEMENT_NAMES[ek];
+                let esn = ELEMENT_NAMES[es];
+                CardSpec::means_card(
+                    &assets,
+                    format!("domain"),
+                    Some(format!("domain {ekn} {esn}")),
+                    0,
+                    true,
+                    1,
+                    vec![],
+                    Rc::new({
+                        let asset = assets.clone();
+                        move |w| {
+                            let bounds = means_graphic_usual_bounds_shrunk_appropriately();
+                            let sd = bounds.span().min();
+                            let br = sd * 0.3;
+                            let sep = br * 0.15;
+                            let bc = bounds.center();
+                            let hr = br * 0.24;
+                            let hrs = hr * 0.3;
+                            let mut hs = HexSpiral::new().layer_iter(2);
+                            hs.next();
+                            let mut cur_layer = hs.0.layer;
+                            let mut i = 0;
+                            let mut el_pos = None;
+                            while let Some(c) = hs.next() {
+                                let first_layer_distance =
+                                    br + sep + hr + (cur_layer - 1) as f64 * (hr * 2.0 + sep);
+                                let spacing = first_layer_distance / (cur_layer as f64);
+                                let p = bc + hexify(c.to_v2()) * spacing;
+                                if i == 1 {
+                                    el_pos = Some(p);
+                                } else {
+                                    asset.darker_blank.centered_rad(p, hrs, w);
+                                }
+                                cur_layer = hs.0.layer;
+                                i += 1;
+                            }
+                            asset.element(es).centered_rad(el_pos.unwrap(), hr * 2.3, w);
+                            asset.element(ek).centered_rad(bc, br, w);
+                            guy2(&asset, bc, 1.0, w);
+                        }
+                    }),
+                    format!(
+                        "standing in {ekn} adjacent to {esn}, flip a land within a 2 land radius."
+                    ),
+                )
+            }
+        })),
+    });
+
+    r.push(CardGen {
+        min_count: 5,
+        desired_proportion: 0.0,
+        generator: Box::new(IndexVec(vec![(VOLCANO, LAKE)]).into_map({
+            let assets = all_assets.clone();
+            move |(ek, es)| {
+                let ekn = ELEMENT_NAMES[ek];
+                let esn = ELEMENT_NAMES[es];
+                CardSpec::means_card(
+                    &assets,
+                    format!("domain"),
+                    Some(format!("domain {ekn} {esn}")),
+                    0,
+                    true,
+                    1,
+                    vec![],
+                    Rc::new({
+                        let asset = assets.clone();
+                        move |w| {
+                            let bounds = means_graphic_usual_bounds_shrunk_appropriately();
+                            let sd = bounds.span().min();
+                            let br = sd * 0.3;
+                            let sep = br * 0.15;
+                            let bc = bounds.center();
+                            let hr = br * 0.24;
+                            let hrs = hr * 0.3;
+                            let mut hs = HexSpiral::new().layer_iter(2);
+                            hs.next();
+                            let mut cur_layer = hs.0.layer;
+                            let mut i = 0;
+                            let mut el_pos = None;
+                            while let Some(c) = hs.next() {
+                                let first_layer_distance =
+                                    br + sep + hr + (cur_layer - 1) as f64 * (hr * 2.0 + sep);
+                                let spacing = first_layer_distance / (cur_layer as f64);
+                                let p = bc + hexify(c.to_v2()) * spacing;
+                                if i == 1 {
+                                    el_pos = Some(p);
+                                } else {
+                                    asset.darker_blank.centered_rad(p, hrs, w);
+                                }
+                                cur_layer = hs.0.layer;
+                                i += 1;
+                            }
+                            asset.element(es).centered_rad(el_pos.unwrap(), hr * 2.3, w);
+                            asset.element(ek).centered_rad(bc, br, w);
+                            guy2(&asset, bc, 1.0, w);
+                        }
+                    }),
+                    format!(
+                        "standing in {ekn} adjacent to {esn}, flip a land within a 2 land radius."
+                    ),
+                )
+            }
+        })),
+    });
 
     r.push(CardGen {
         min_count: 9,
@@ -929,14 +1233,12 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                             guy2(&asset, bc, 1.0, w);
                         }
                     }),
-                    format!(
-                        "standing in {ekn} adjacent to {esn}, flip an adjacent land."
-                    ),
+                    format!("standing in {ekn} adjacent to {esn}, flip an adjacent land."),
                 )
             }
         })),
     });
-    
+
     r.push(CardGen {
         min_count: 9,
         desired_proportion: 0.0,
@@ -948,7 +1250,7 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                 CardSpec::means_card(
                     &assets,
                     format!("domain burn"),
-                    Some(format!("domain smaller burn {ekn} {esn}")),
+                    Some(format!("domain smaller exchange {ekn} {esn}")),
                     0,
                     false,
                     1,
@@ -1040,9 +1342,7 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                             guy2(&asset, bc, 1.0, w);
                         }
                     }),
-                    format!(
-                        "standing in {ekn}, flip a land within a 2 land radius."
-                    ),
+                    format!("standing in {ekn}, flip a land within a 2 land radius."),
                 )
             }
         })),
@@ -1175,7 +1475,6 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
     //     ))),
     // });
 
-   
     r.push(CardGen {
         min_count: 4,
         desired_proportion: 0.0,
@@ -1213,135 +1512,175 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
     r.push(CardGen {
         min_count: 9,
         desired_proportion: 0.0,
-        generator: Box::new(IndexVec(vec![
-            (MOUNTAIN, LAKE, VOID), (ICE, VOID, MOUNTAIN), (TOMB, FIELD, LAKE), (FOREST, ICE, ICE), (VOLCANO, FIELD, TOMB),
-            (MOUNTAIN, MOUNTAIN, LAKE), (ICE, TOMB, LAKE), (VOLCANO, FIELD, FIELD), (FOREST, VOLCANO, VOID)
-        ]).into_map({
-            let assets = all_assets.clone();
-            move |(ae, be, ce)| {
-                let aen = ELEMENT_NAMES[ae];
-                let ben = ELEMENT_NAMES[be];
-                let cen = ELEMENT_NAMES[ce];
-                CardSpec::means_card(
-                    &assets,
-                    "flip all".to_string(),
-                    Some(format!("flip_all_{aen}_{ben}_{cen}")),
-                    2,
-                    true,
-                    1,
-                    vec![(
-                        Change,
-                        vec![
-                            opposite_element(ae),
-                            opposite_element(be),
-                            opposite_element(ce),
-                        ],
-                    )],
-                    Rc::new({
-                        let assets = assets.clone();
-                        move |w| {
-                            let fae = assets.flip_to(ae);
-                            let fbe = assets.flip_to(be);
-                            let fce = assets.flip_to(ce);
+        generator: Box::new(
+            IndexVec(vec![
+                (MOUNTAIN, LAKE, FOREST),
+                (ICE, VOID, MOUNTAIN),
+                (TOMB, FIELD, LAKE),
+                (FOREST, ICE, ICE),
+                (VOLCANO, FIELD, TOMB),
+                (MOUNTAIN, VOID, LAKE),
+                (ICE, TOMB, LAKE),
+                (VOLCANO, FIELD, FIELD),
+                (FOREST, VOLCANO, VOID),
+            ])
+            .into_map({
+                let assets = all_assets.clone();
+                move |(ae, be, ce)| {
+                    let aen = ELEMENT_NAMES[ae];
+                    let ben = ELEMENT_NAMES[be];
+                    let cen = ELEMENT_NAMES[ce];
+                    CardSpec::means_card(
+                        &assets,
+                        "flip all".to_string(),
+                        Some(format!("flip_all_{aen}_{ben}_{cen}")),
+                        2,
+                        true,
+                        1,
+                        vec![(
+                            Change,
+                            vec![
+                                opposite_element(ae),
+                                opposite_element(be),
+                                opposite_element(ce),
+                            ],
+                        )],
+                        Rc::new({
+                            let assets = assets.clone();
+                            move |w| {
+                                let fae = assets.flip_to(ae);
+                                let fbe = assets.flip_to(be);
+                                let fce = assets.flip_to(ce);
 
-                            let tilt = -TAU / 24.0 + TAU / 2.0;
-                            let arc = TAU / 3.0;
-                            let r = GRAPHIC_RAD * 0.5;
-                            let scale = 0.5;
-                            let bounds = means_graphic_usual_bounds_shrunk_appropriately();
-                            let c = bounds.center();
+                                let tilt = -TAU / 24.0 + TAU / 2.0;
+                                let arc = TAU / 3.0;
+                                let r = GRAPHIC_RAD * 0.5;
+                                let scale = 0.5;
+                                let bounds = means_graphic_usual_bounds_shrunk_appropriately();
+                                let c = bounds.center();
 
-                            fae.centered(c + from_angle_mag(tilt, r), scale, w);
-                            fbe.centered(c + from_angle_mag(tilt + arc, r), scale, w);
-                            fce.centered(c + from_angle_mag(tilt + arc * 2.0, r), scale, w);
-                        }
-                    }),
-                    format!("standing on any chain of {aen}, {ben}, {cen}, flip all at once."),
-                )
-            }
-        })),
+                                fae.centered(c + from_angle_mag(tilt, r), scale, w);
+                                fbe.centered(c + from_angle_mag(tilt + arc, r), scale, w);
+                                fce.centered(c + from_angle_mag(tilt + arc * 2.0, r), scale, w);
+                            }
+                        }),
+                        format!("standing on any chain of {aen}, {ben}, {cen}, flip all at once."),
+                    )
+                }
+            }),
+        ),
     });
-    
+
     r.push(CardGen {
         min_count: 8,
         desired_proportion: 0.0,
-        generator: Box::new(IndexVec(vec![(LAKE, ICE), (MOUNTAIN, FIELD), (LAKE, MOUNTAIN), (VOLCANO, VOID), (LAKE, FIELD), (FIELD, ICE), (FOREST, VOID), (TOMB, MOUNTAIN)]).into_map({
-            let assets = all_assets.clone();
-            move |(ae, be)| {
-                let aen = ELEMENT_NAMES[ae];
-                let ben = ELEMENT_NAMES[be];
-                CardSpec::means_card(
-                    &assets,
-                    "flip both".to_string(),
-                    Some(format!("flip_both_{aen}_{ben}")),
-                    2,
-                    true,
-                    1,
-                    vec![(
-                        Change,
-                        vec![
-                            opposite_element(ae),
-                            opposite_element(be),
-                        ],
-                    )],
-                    Rc::new({
-                        let assets = assets.clone();
-                        move |w| {
-                            let fae = assets.flip_to(ae);
-                            let fbe = assets.flip_to(be);
-                            let r = 0.55*BIG_ELEMENT_RAD;
-                            let sep = 0.08*BIG_ELEMENT_RAD;
-                            let arc = from_angle_mag(-TAU/12.0, r + sep);
-                            let bounds = means_graphic_usual_bounds_shrunk_appropriately();
-                            fae.centered_rad(bounds.center() + arc, r, w);
-                            fbe.centered_rad(bounds.center() - arc, r, w);
-                        }
-                    }),
-                    format!("standing on any pair of {aen} and {ben}, flip both."),
-                )
-            }
-        })),
+        generator: Box::new(
+            IndexVec(vec![
+                (LAKE, ICE),
+                (MOUNTAIN, FIELD),
+                (LAKE, MOUNTAIN),
+                (ICE, VOID),
+                (FOREST, VOID),
+                (TOMB, MOUNTAIN),
+            ])
+            .into_map({
+                let assets = all_assets.clone();
+                move |(ae, be)| {
+                    let aen = ELEMENT_NAMES[ae];
+                    let ben = ELEMENT_NAMES[be];
+                    CardSpec::means_card(
+                        &assets,
+                        "flip both".to_string(),
+                        Some(format!("flip_both_{aen}_{ben}")),
+                        1,
+                        false,
+                        1,
+                        vec![(Change, vec![opposite_element(ae), opposite_element(be)])],
+                        Rc::new({
+                            let assets = assets.clone();
+                            move |w| {
+                                // let fae = assets.flip_to(ae);
+                                // let fbe = assets.flip_to(be);
+                                // let r = 0.55 * BIG_ELEMENT_RAD;
+                                // let sep = 0.08 * BIG_ELEMENT_RAD;
+                                // let arc = from_angle_mag(TAU / 6.0, r + sep);
+                                let bounds = means_graphic_usual_bounds_shrunk_appropriately();
+                                // fae.centered_rad(bounds.center() + arc, r, w);
+                                // fbe.centered_rad(bounds.center() - arc, r, w);
+                                
+                                pair_flip_angle(bounds.center(), bounds.span().x/2.0, &*assets, ae, be, w);
+                            }
+                        }),
+                        format!("standing on any pair of {aen} and {ben}, flip both."),
+                    )
+                }
+            }),
+        ),
     });
 
-    r.push(CardGen { min_count: 1, desired_proportion: 0.0, generator: Box::new({let all_assets = all_assets.clone(); Once(CardSpec::means_card(
-        &all_assets,
-        "atoms for something else".to_string(), None,
-        2, true, 2,
-        vec![(Kill, vec![ICE])],
-        Rc::new({
-            let all_assets = all_assets.clone();
-            move |w| {
-                let bounds = means_graphic_usual_bounds();
-                let sd = bounds.span().min();
-                let c = bounds.center();
-                let lateral = sd*0.23;
-                let downward = sd*0.3;
-                let guy_scale = 0.85;
-                all_assets.element(ICE).centered_rad(c + V2::new(0.0, downward), downward*0.9, w);
-                all_assets.guy2_mage.by_anchor(c + V2::new(-lateral, 0.0), guy_scale, w);
-                horizontal_flip(&all_assets.cubed_guy2).by_anchor(c + V2::new(lateral, 0.0), guy_scale, w);
-            }
-        }),
-        "Adjacent to ice that is also adjacent to an opponent's agent, capture that agent and replace their agent with a spare of your own. All of your agents can now use that player's abilities.".to_string(),
-    ))})});
+    r.push(CardGen { min_count: 5, desired_proportion: 0.0, generator: Box::new({let all_assets = all_assets.clone(); IndexVec(vec![ICE, FIELD]).into_map(move |e| {
+        let ename = ELEMENT_NAMES[e];
+        CardSpec::means_card(
+            &all_assets,
+            "atoms for something else".to_string(), Some(format!("atoms {ename}")),
+            2, true, 1,
+            vec![(Kill, vec![e])],
+            Rc::new({
+                let all_assets = all_assets.clone();
+                move |w| {
+                    let bounds = means_graphic_usual_bounds();
+                    let sd = bounds.span().min();
+                    let c = bounds.center();
+                    let lateral = sd*0.23;
+                    let downward = sd*0.3;
+                    let guy_scale = 0.85;
+                    all_assets.element(e).centered_rad(c + V2::new(0.0, downward), downward*0.9, w);
+                    all_assets.guy2_mage.by_anchor(c + V2::new(-lateral, 0.0), guy_scale, w);
+                    horizontal_flip(&all_assets.cubed_guy2).by_anchor(c + V2::new(lateral, 0.0), guy_scale, w);
+                }
+            }),
+            format!("Adjacent to {ename} that is also adjacent to an opponent's agent, capture that agent and replace their agent with a spare of your own. All of your agents can now use that player's abilities."),
+        )
+    })})});
 
     r
 }
 
+pub fn land_hex_old_bounds() -> Rect {
+    let a = V2::new(13.174, 9.298);
+    Rect {
+        ul: a,
+        br: a + V2::new(292.189, 257.660),
+    }
+}
+pub fn land_hex_smaller_bounds() -> Rect {
+    let a = V2::new(10.075, 16.016);
+    Rect {
+        ul: a,
+        br: a + V2::new(98.913, 87.029),
+    }
+}
 pub fn land_specs(assets: &Rc<Assets>, repeating: &[u8]) -> Vec<CardGen> {
     assert_eq!(repeating.len(), 4);
     let mut r: Vec<CardGen> = Vec::new();
     fn side(assets: Rc<Assets>, e: ElementTag) -> Rc<impl Fn(&mut dyn Write)> {
-        let rad = land_hex_usual_bounds().span().min()/2.0*0.98;
+        let mini_hex_dims = V2::new(119.063, 119.063);
+        let old_hex_dims = V2::new(317.5, 277.8125);
+        let rad = land_hex_smaller_bounds().span().min() / 2.0 * 0.98;
         Rc::new(move |w: &mut dyn Write| {
-            land_hex_svg_outer(
+            svg_outer(
+                mini_hex_dims,
+                ELEMENT_COLORS_BACK[e],
                 &Displaying({
                     let assets = assets.clone();
-                    move |w| assets.element(e).centered_rad(land_hex_usual_bounds().center(), rad, w)
+                    move |w| {
+                        assets
+                            .element(e)
+                            .centered_rad(land_hex_smaller_bounds().center(), rad, w)
+                    }
                 }),
-                ELEMENT_COLORS_BACK[e],
                 w,
-            )
+            );
         })
     }
     r.push(CardGen {
@@ -1352,7 +1691,7 @@ pub fn land_specs(assets: &Rc<Assets>, repeating: &[u8]) -> Vec<CardGen> {
             let repeatings = Vec::from(repeating);
             move |(e, eo)| CardSpec {
                 name: format!("land_{}_{}", ELEMENT_NAMES[e], ELEMENT_NAMES[eo]),
-                repeat: repeatings[e/2] as usize,
+                repeat: repeatings[e / 2] as usize,
                 level: 0,
                 frequency_modifier: 1.0,
                 properties: vec![],

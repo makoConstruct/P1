@@ -741,70 +741,6 @@ impl CardSpec {
     }
 }
 
-pub fn land_hex_usual_bounds() -> Rect {
-    let a = V2::new(13.174, 9.298);
-    Rect {
-        ul: a,
-        br: a + V2::new(292.189, 257.660),
-    }
-}
-pub fn land_hex_svg_outer(inserting: &impl Display, background_color: &str, to: &mut dyn Write) {
-    write!(to, r##"<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<!-- Created with Inkscape (http://www.inkscape.org/) and mako -->
-
-<svg
-   width="317.5mm"
-   height="277.8125mm"
-   viewBox="0 0 317.5 277.8125"
-   version="1.1"
-   id="svg1"
-   inkscape:version="1.3.2 (091e20ef0f, 2023-11-25)"
-   sodipodi:docname="hex template.svg"
-   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
-   xmlns="http://www.w3.org/2000/svg"
-   xmlns:svg="http://www.w3.org/2000/svg">
-  <sodipodi:namedview
-     id="namedview1"
-     pagecolor="#ffffff"
-     bordercolor="#000000"
-     borderopacity="0.25"
-     inkscape:showpageshadow="2"
-     inkscape:pageopacity="0.0"
-     inkscape:pagecheckerboard="0"
-     inkscape:deskcolor="#d1d1d1"
-     inkscape:document-units="mm"
-     inkscape:zoom="0.5455178"
-     inkscape:cx="647.09162"
-     inkscape:cy="417.95153"
-     inkscape:window-width="1896"
-     inkscape:window-height="1052"
-     inkscape:window-x="24"
-     inkscape:window-y="0"
-     inkscape:window-maximized="1"
-     inkscape:current-layer="layer1" />
-  <defs id="defs1"></defs>
-  <g
-     inkscape:label="Layer 1"
-     inkscape:groupmode="layer"
-     id="layer1">
-    <polygon
-       fill="#{background_color}"
-       points="288,-0.25 0,-0.25 0,251.75 288,251.75 "
-       id="polygon3673"
-       transform="matrix(1.1024306,0,0,1.1024306,0,0.27560834)"
-       style="fill:#{background_color};fill-opacity:1" />
-    <path
-       fill="#{background_color}"
-       d="m 94.154184,266.95686 c -5.116379,0 -11.394721,-3.62479 -13.954567,-8.05545 L 15.093377,146.18339 c -2.558741,-4.43066 -2.558741,-11.68025 0,-16.10981 L 80.199617,17.352258 C 82.758359,12.922692 89.037805,9.2979001 94.154184,9.2979001 H 224.3832 c 5.11638,0 11.39583,3.6247919 13.95346,8.0543579 l 65.10845,112.721322 c 2.55764,4.42956 2.55764,11.67915 0,16.10981 l -65.10845,112.71912 c -2.55763,4.43067 -8.83818,8.05546 -13.95346,8.05546 H 94.154184 Z"
-       id="path3673"
-       style="fill:#{background_color};fill-opacity:1;stroke:none;stroke-width:1.10243" />
-    {inserting}
-  </g>
-</svg>
-"##).unwrap();
-}
-
 pub fn end_backing(
     assets: &Rc<Assets>,
     inserting: &impl Display,
@@ -1586,6 +1522,49 @@ fn generate_either(e1: &Asset, e2: &Asset) -> Asset {
     }
 }
 
+pub fn ring_conversion(
+    c: V2,
+    r: f64,
+    support: &Asset,
+    ring_color: &str,
+    ring_asset: &Asset,
+    w: &mut dyn Write,
+) {
+    let or = 53.04;
+    let s = r / or;
+    let oer = 47.136 / 2.0;
+    let osupport = V2::new(-23.567, -68.429) + both_dims(oer);
+    let oring_element = V2::new(-23.567, 27.126) + both_dims(oer);
+    let background_color = CARD_BACKGROUND_COLOR;
+    write!(w, r##"
+<g
+    inkscape:label="Layer 1"
+    inkscape:groupmode="layer"
+    id="layer1"
+    transform="translate({},{}) scale({s})"
+    >
+    <path
+        id="path4028"
+        style="fill:#{ring_color};fill-opacity:1;stroke-width:1.373;stroke-linecap:round;stroke-linejoin:round"
+        d="M 5.0024898e-4,-53.040019 C -29.292895,-53.040234 -53.040026,-29.293293 -53.040122,1.815e-4 -52.987257,19.0527 -42.719728,36.61312 -26.142062,46.003581 l 0.0012,0.0015 c 1.565408,0.935034 2.473643,2.746914 2.488273,4.570258 l 2.013397,-0.018 0.599899,-1.9389 c 6.637789,2.894809 13.7980481,4.39972 21.03956924928,4.422 C 7.2455451,53.018299 14.409426,51.511962 21.050069,48.614381 l 0.600999,1.943 2.013397,0.018 c 0.01463,-1.823344 0.918731,-3.639357 2.484138,-4.574392 l 0.0034,-0.002 C 42.724386,36.606791 52.98763,19.048993 53.040122,1.815e-4 53.040026,-29.293058 29.293261,-53.039902 1.0024957e-4,-53.040019 Z"
+        sodipodi:nodetypes="cccccccccccccccc" />
+    <path
+        style="fill:#{background_color};fill-opacity:1;stroke-width:1.3083;stroke-linecap:round;stroke-linejoin:round"
+        d="M -4.9974955e-4,-27.450669 A 27.45077,27.450844 0 0 1 27.45066,3.315e-4 27.45077,27.450844 0 0 1 -4.9974955e-4,27.451131 27.45077,27.450844 0 0 1 -27.45066,3.315e-4 27.45077,27.450844 0 0 1 -4.9974955e-4,-27.450669 Z"
+        id="path4014" />
+    {}
+    <path
+        style="fill:#{background_color};fill-opacity:1;stroke-width:1.41821;stroke-linecap:round;stroke-linejoin:round"
+        d="M 4.0024913e-4,-74.617919 A 29.756683,29.756763 0 0 1 29.757456,-44.861119 29.756683,29.756763 0 0 1 4.0024913e-4,-15.104519 29.756683,29.756763 0 0 1 -29.755856,-44.861119 29.756683,29.756763 0 0 1 4.0024913e-4,-74.617919 Z"
+        id="path4015" />
+    {}
+</g>"##,
+     c.x, c.y,
+     &Displaying(|w| { ring_asset.centered_rad(oring_element, oer, w); }),
+     &Displaying(|w| { support.centered_rad(osupport, oer, w); }),
+   ).unwrap();
+}
+
 pub fn horizontal_flip(a: &Asset) -> Asset {
     let ac = a.clone();
     Asset {
@@ -1661,6 +1640,8 @@ impl Assets {
         let flip_ice = element_flip(&lake, &ice);
         let flip_tomb = element_flip(&void, &tomb);
         let flip_void = element_flip(&tomb, &void);
+
+        // let strikethrough_road = load_asset(&Path::new("assets/strikethrough_road.svg"), None);
 
         let field_forest = generate_either(&field, &forest);
         let mountain_volcano = generate_either(&mountain, &volcano);
@@ -1984,8 +1965,7 @@ pub fn flip_rings(
     to: &mut dyn Write,
 ) {
     let offset = center - rotate(from_angle(rotation), both_dims(FLIP_RINGS_RAD)) * scale;
-    write!(to, r##"
-        <g
+    write!(to, r##"<g
         inkscape:label="Layer 1"
         inkscape:groupmode="layer"
         id="layer1"
@@ -2003,6 +1983,148 @@ pub fn flip_rings(
         d="m 0,57.828512 c -5.7990107e-5,31.937829 25.890683,57.828568 57.828512,57.828508 31.937827,6e-5 57.828568,-25.890681 57.828508,-57.828508 H 102.70071 C 102.70061,82.610703 82.610703,102.70061 57.828512,102.70071 33.04612,102.7009 12.955894,82.610904 12.955798,57.828512 Z"
         sodipodi:nodetypes="ccccccc" />
     </g>"##, offset.x, offset.y, scale, rotation/TAU*360.0).unwrap();
+}
+
+pub fn chain_graphic(
+    assets: &Assets,
+    a: ElementTag,
+    b: ElementTag,
+    c: ElementTag,
+    center: V2,
+    r: f64,
+    w: &mut dyn Write,
+) {
+    let tr = V2::new(123.744, 115.026);
+    let ac = V2::new(32.535, 56.352);
+    let bc = V2::new(0.0, 0.0);
+    let cc = V2::new(65.070, 0.0);
+    let er = 58.674;
+    let ae = ELEMENT_COLORS_BACK[a];
+    let be = ELEMENT_COLORS_BACK[b];
+    let ce = ELEMENT_COLORS_BACK[c];
+    let scale = r / (tr.x / 2.0);
+    let offset = center - scale * tr / 2.0;
+    write!(
+        w,
+        r##"
+<g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate({},{}), scale({scale})"
+     >
+    <path
+       id="b1"
+       style="fill:#{be};fill-opacity:1;stroke-width:1.34089;stroke-linecap:round;stroke-linejoin:round"
+       d="m 52.652735,40.245696 -12.76314,7.3688 -12.76269,7.36854 2.15852,3.73867 c 1.45813,-0.0238 2.89643,0.34015 4.1677,1.0547 1.36653,0.78897 2.4775,1.9541 3.20058,3.35663 1.28363,2.48997 2.57379,4.67606 1.173,7.10204 -0.0148,0.0202 -0.0296,0.0403 -0.0445,0.0603 l 2.13578,3.69929 11.40169,-6.58277 11.62897,-6.71399 -2.13243,-3.69347 c -2.96826,0.0289 -4.588,-2.19745 -6.07311,-4.76764 -1.48334,-2.57122 -1.46733,-5.74195 0.0418,-8.2981 z"
+       sodipodi:nodetypes="cccccsccccccccc" />
+    <path
+       id="a1"
+       style="fill:#{ae};stroke-width:1.34089;stroke-linecap:round;stroke-linejoin:round"
+       d="m 61.950355,56.349656 a 8.2314558,8.2314434 60 0 1 -7.20728,-4.11283 l -18.30133,10.56628 a 8.2314434,8.2314558 30 0 1 0.21196,0.32993 8.2314434,8.2314558 30 0 1 -0.188,7.88782 8.2314434,8.2314558 30 0 1 -0.0445,0.0603 l 2.13579,3.69928 12.76269,-7.36854 12.76313,-7.3688 z" />
+    <path
+       id="b2"
+       style="fill:#{be};fill-opacity:1;stroke-width:1.34089;stroke-linecap:round;stroke-linejoin:round"
+       d="m 50.442035,14.599716 v 14.73761 l -10e-6,14.73708 h 4.31705 c 0.70845,-1.27468 1.74279,-2.33831 2.99726,-3.08198 1.36654,-0.78895 2.93106,-1.16853 4.50722,-1.09345 2.79818,0.13333 5.33648,0.10905 6.73705,2.53516 0.01,0.023 0.0197,0.046 0.0304,0.0686 h 4.27157 v -13.16554 l -2e-5,-13.42797 -4.26484,-10e-6 c -1.4591,2.58505 -4.19705,2.87461 -7.16545,2.87566 -2.96841,-9.9e-4 -5.70635,-1.60024 -7.16547,-4.18526 z"
+       sodipodi:nodetypes="cccccsccccccccc" />
+    <path
+       id="c1"
+       style="fill:#{ce};stroke-width:1.34089;stroke-linecap:round;stroke-linejoin:round"
+       d="m 69.037285,14.599716 a 8.2314558,8.2314434 0 0 1 -7.16548,4.18525 l 10e-6,21.13256 a 8.2314558,8.2314434 60 0 1 0.39171,-0.0186 8.2314558,8.2314434 60 0 1 6.73706,4.10671 8.2314558,8.2314434 60 0 1 0.0304,0.0686 l 4.27158,-10e-6 -2e-5,-14.73704 2e-5,-14.7376 z" />
+  {}
+  </g>"##,
+  offset.x, offset.y,
+        &Displaying(|w| {
+            let es = er / BIG_ELEMENT_SPAN;
+            assets.element(a).by_ul(ac, es, w);
+            assets.element(b).by_ul(bc, es, w);
+            assets.element(c).by_ul(cc, es, w);
+        })
+    ).unwrap();
+}
+
+pub fn pair_graphic(
+    assets: &Assets,
+    a: ElementTag,
+    b: ElementTag,
+    center: V2,
+    r: f64,
+    w: &mut dyn Write,
+) {
+    let tr = V2::new(115.026, 91.209);
+    let bc = V2::new(56.352, 32.535);
+    let ac = V2::new(0.0, 0.0);
+    let er = 58.674;
+    let ae = ELEMENT_COLORS_BACK[a];
+    let be = ELEMENT_COLORS_BACK[b];
+    let scale = r / (tr.x / 2.0);
+    let offset = center - scale * tr / 2.0;
+    write!(
+        w,
+        r##"
+<g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate({},{}), scale({scale})"
+     >
+    <path
+       id="b1"
+       style="fill:#{ae};fill-opacity:1;stroke-width:1.34089;stroke-linecap:round;stroke-linejoin:round"
+       d="m 54.983391,27.126322 -7.368804,12.763138 -7.368543,12.762687 3.738668,2.158524 c 1.250877,-0.749677 2.678457,-1.153637 4.136683,-1.170455 1.577935,3e-6 3.122628,0.45355 4.450099,1.306636 2.356641,1.514563 4.566998,2.762693 4.566867,5.564047 -0.0027,0.0249 -0.0055,0.0497 -0.0084,0.07447 l 3.699285,2.135789 6.582768,-11.401692 6.713989,-11.62897 -3.693474,-2.132423 c -2.556139,1.509157 -5.07205,0.390952 -7.643288,-1.092344 -2.57022,-1.485071 -4.14172,-4.239008 -4.112849,-7.207264 z"
+       sodipodi:nodetypes="cccccsccccccccc" />
+    <path
+       id="a1"
+       style="fill:#{be};stroke-width:1.34089;stroke-linecap:round;stroke-linejoin:round"
+       d="m 71.087347,36.42395 a 8.2314558,8.2314434 30 0 1 -8.298104,0.04182 L 52.222967,54.767107 a 8.2314434,8.2314558 0 0 1 0.348527,0.179747 8.2314434,8.2314558 0 0 1 3.781098,6.925053 8.2314434,8.2314558 0 0 1 -0.0084,0.07447 l 3.699288,2.135776 7.368544,-12.762688 7.368794,-12.763133 z" />
+  {}
+  </g>"##,
+  offset.x, offset.y,
+        &Displaying(|w| {
+            let es = er / BIG_ELEMENT_SPAN;
+            assets.element(a).by_ul(ac, es, w);
+            assets.element(b).by_ul(bc, es, w);
+        })
+    ).unwrap();
+}
+
+pub fn pair_flip_angle(c:V2, r:f64, assets: &Assets, e1: ElementTag, e2: ElementTag, w: &mut dyn Write) {
+    let ptsp = V2::new(91.208817, 115.02631);
+    let e1ul = V2::new(0.0, 56.352);
+    let e2ul = V2::new(32.535, 0.0);
+    let er = 58.674 / 2.0;
+    let e1color = ELEMENT_COLORS_BACK[e1];
+    let e2ocolor = ELEMENT_COLORS_BACK[opposite_element(e2)];
+    let s: f64 = r/(ptsp.x/2.0);
+    let offset = c - s*ptsp/2.0;
+
+    write!(
+        w,
+        r##"<g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate({},{}) scale({s})"
+     >
+    <path
+       id="b1"
+       style="fill:#{e1color};fill-opacity:1;stroke-width:1.34089;stroke-linecap:round;stroke-linejoin:round"
+       d="m 27.126323,60.042925 12.763138,7.368804 12.762687,7.368543 2.158524,-3.738668 c -0.749677,-1.250877 -1.153637,-2.678457 -1.170455,-4.136683 3e-6,-1.577935 0.45355,-3.122628 1.306636,-4.450099 1.514563,-2.356641 2.762693,-4.566998 5.564047,-4.566867 0.0249,0.0027 0.0497,0.0055 0.07447,0.0084 l 2.135789,-3.699285 -11.401692,-6.582768 -11.62897,-6.713989 -2.132423,3.693474 c 1.509157,2.556139 0.390952,5.07205 -1.092344,7.643288 -1.485071,2.57022 -4.239008,4.14172 -7.207264,4.112849 z"
+       sodipodi:nodetypes="cccccsccccccccc" />
+    <path
+       id="a1"
+       style="fill:#{e2ocolor};stroke-width:1.34089;stroke-linecap:round;stroke-linejoin:round"
+       d="m 36.423951,43.938969 a 8.2314434,8.2314558 30 0 1 0.04182,8.298104 l 18.301337,10.566276 a 8.2314558,8.2314434 0 0 1 0.179747,-0.348527 8.2314558,8.2314434 0 0 1 6.925053,-3.781098 8.2314558,8.2314434 0 0 1 0.07447,0.0084 L 64.082154,54.982836 51.319466,47.614292 38.556333,40.245498 Z" />
+   {}
+  </g>"##,
+    offset.x, offset.y,
+        &Displaying({
+            |w| {
+                assets.flip_to(e1).centered_rad(e1ul + both_dims(er), er, w);
+                assets.flip_to(e2).centered_rad(e2ul + both_dims(er), er, w);
+            }
+        })
+    ).unwrap();
 }
 
 pub const FLIP_RINGS_SPAN: f64 = 115.65681;
@@ -2135,7 +2257,7 @@ pub fn overplace(
     .unwrap();
 }
 
-pub fn do_sheet(span: V2, inserting: &impl Display, to: &mut dyn Write) {
+pub fn svg_outer(span: V2, background_color: &str, inserting: &impl Display, to: &mut dyn Write) {
     let span_x = span.x;
     let span_y = span.y;
     write!(
@@ -2176,11 +2298,16 @@ pub fn do_sheet(span: V2, inserting: &impl Display, to: &mut dyn Write) {
      inkscape:current-layer="layer1" />
   <defs
      id="defs1" />
+     <polygon fill="#{background_color}" points="0,0 0,{span_y} {span_x},{span_y} {span_x},0 0,0 "/>
   {inserting}
 </svg>
 "##,
     )
     .unwrap();
+}
+
+pub fn do_sheet(span: V2, inserting: &impl Display, to: &mut dyn Write) {
+    svg_outer(span, CARD_BACKGROUND_COLOR, inserting, to);
 }
 
 fn element_flip(from: &Asset, to: &Asset) -> Asset {
@@ -2252,6 +2379,11 @@ fn element_flip(from: &Asset, to: &Asset) -> Asset {
             }
         }),
     }
+}
+
+pub fn all_around_ring(c: V2, color: &str, w: &mut dyn Write) {
+    let er = 67.895;
+    let surround_pos_ = V2::new(-71.861, 26.524) + both_dims(er);
 }
 
 pub fn guy2_mage(assets: &Rc<Assets>, c: V2, scale: f64, w: &mut dyn Write) {
