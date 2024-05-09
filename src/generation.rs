@@ -15,25 +15,27 @@ pub fn end_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
     specs.push(CardGen {
         min_count: 7,
         desired_proportion: 0.0,
-        generator: Box::new(elements().into_map({
-            let all_assets = all_assets.clone();
-            move |e| {
-                let scores = "1".to_string();
-                CardSpec::end_card_with_back_blurred_message(
-                    &all_assets,
-                    format!("1_{}", ELEMENT_NAMES[e]),
-                    Rc::new(Displaying(move |w| {
-                        (ELEMENT_G[e])(END_GRAPHIC_CENTER, 1.0, w)
-                    })),
-                    scores.clone(),
-                    1,
-                    format!("{} point for every {}", &scores, ELEMENT_NAMES[e]),
-                    vec![e],
-                    1,
-                    false,
-                )
-            }
-        })),
+        generator: Box::new(
+            IndexVec(vec![FIELD, FOREST, LAKE, ICE, MOUNTAIN, VOLCANO, TOMB]).into_map({
+                let all_assets = all_assets.clone();
+                move |e| {
+                    let scores = "1".to_string();
+                    CardSpec::end_card_with_back_blurred_message(
+                        &all_assets,
+                        format!("1_{}", ELEMENT_NAMES[e]),
+                        Rc::new(Displaying(move |w| {
+                            (ELEMENT_G[e])(END_GRAPHIC_CENTER, 1.0, w)
+                        })),
+                        scores.clone(),
+                        1,
+                        format!("{} point for every {}", &scores, ELEMENT_NAMES[e]),
+                        vec![e],
+                        1,
+                        false,
+                    )
+                }
+            }),
+        ),
     });
 
     specs.push(CardGen {
@@ -91,7 +93,7 @@ pub fn end_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
         generator: Box::new(IndexVec(vec![VOLCANO, VOID, LAKE]).into_map({
             let all_assets = all_assets.clone();
             move |e| {
-                let scores = "9".to_string();
+                let scores = "10".to_string();
                 let ename = ELEMENT_NAMES[e];
                 CardSpec::end_card_with_back_blurred_message(
                     &all_assets,
@@ -131,7 +133,7 @@ pub fn end_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
     specs.push(CardGen {
         min_count: 8,
         desired_proportion: 0.0,
-        generator: Box::new(IndexVec(vec![(MOUNTAIN, FIELD, LAKE), (FIELD, TOMB, FIELD), (LAKE, ICE, LAKE), (VOLCANO, VOLCANO, FOREST), (VOID, MOUNTAIN, TOMB)]).into_map({
+        generator: Box::new(IndexVec(vec![(MOUNTAIN, FIELD, LAKE), (VOLCANO, VOLCANO, FOREST), (VOID, MOUNTAIN, TOMB)]).into_map({
             let all_assets = all_assets.clone();
             move |(a,b,c)| {
                 let aname = ELEMENT_NAMES[a];
@@ -269,7 +271,7 @@ pub fn end_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                             &scores, ELEMENT_NAMES[e1], ELEMENT_NAMES[e2], ELEMENT_NAMES[e3]
                         ),
                         vec![e1, e2, e3],
-                        0,
+                        2,
                         false,
                     )
                 }
@@ -277,7 +279,7 @@ pub fn end_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
         ),
     });
 
-    specs.push(CardGen { min_count: 2, desired_proportion: 0.0, generator: Box::new(IndexVec(vec![(ICE, FIELD, TOMB), (VOLCANO, FIELD, FOREST)]).into_map({
+    specs.push(CardGen { min_count: 2, desired_proportion: 0.0, generator: Box::new(IndexVec(vec![(ICE, FIELD, TOMB), (VOLCANO, MOUNTAIN, FOREST)]).into_map({
         let all_assets = all_assets.clone();
         move |(e1, eroad, e3)| {
             let e1np = ELEMENT_NAMES_PLURAL[e1];
@@ -336,7 +338,7 @@ pub fn end_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
             move |e| {
                 let ename = ELEMENT_NAMES[e];
                 let ename_plural = ELEMENT_NAMES_PLURAL[e];
-                let scores = "11".to_string();
+                let scores = "12".to_string();
                 CardSpec::end_card_with_back_blurred_message(
                     &all_assets,
                     format!("forbid_{ename}"),
@@ -581,7 +583,7 @@ pub fn end_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
             &all_assets,
             &assets.dead_guy2,
             String::from("scavenger"),
-            2,
+            3,
             "4".to_string(),
             String::from("You gain 4 points for each agent who is killed"),
             vec![],
@@ -640,7 +642,7 @@ pub fn end_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                 );
             }
         })),
-        "+=".to_string(), 2,
+        "=".to_string(), 2,
         "You share the desires of other players, but only when they're adjacent to you. eg, if someone standing next to you wants forests, so do you. But if they move away, you will stop caring about forests.".to_string(),
         vec![],
         2,
@@ -661,8 +663,8 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
         let element_name = ELEMENT_NAMES[e];
         CardSpec::means_card(
             &assets,
-            format!("ambush from {element_name}"),
-            None,
+            format!("{element_name} ambush"),
+            Some(format!("ambush from {element_name}")),
             0, false, 1,
             vec![(Kill, vec![e])],
             {
@@ -693,8 +695,8 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
         let pair_name_escaped = pair_name.replace('/', " or ");
         CardSpec::means_card(
             &assets,
-            format!("ambush beside {pair_name}"),
-            Some(format!("ambush beside {pair_name_escaped}")),
+            format!("slaying"),
+            Some(format!("slaying beside {pair_name_escaped}")),
             0, false, 1,
             vec![(Kill,vec![e.0, e.1])],
             {
@@ -714,7 +716,7 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                     guy2_dead(&assets, bdc + V2::new(0.0, bdr*0.57), 1.0, w);
                 })
             },
-            format!("standing on or adjacent to {pair_name}, standing with an agent, kill that agent"),
+            format!("while in the same land as another agent, on or adjacent to {pair_name}, kill the agent"),
         )
     }}))});
 
@@ -798,7 +800,7 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                         assets.guy2.by_anchor_rad(center, sd*0.13, w);
                     }
                 }),
-                format!("on or adjacent to {support_opposite_name}, flip all of the {ring_opposite_name_plural} around you"),
+                format!("on or adjacent to {support_opposite_name}, flip all of the {ring_opposite_name_plural} below your feet or adjacent to you"),
             )
         }
     }))});
@@ -1290,7 +1292,7 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                         }
                     }),
                     format!(
-                        "standing in {ekn} adjacent to {esn}, flip the {esn} to flip one other adjacent land."
+                        "standing in {ekn} adjacent to {esn}, flip the {esn} to flip any one other adjacent land."
                     ),
                 )
             }
@@ -1607,8 +1609,15 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                                 let bounds = means_graphic_usual_bounds_shrunk_appropriately();
                                 // fae.centered_rad(bounds.center() + arc, r, w);
                                 // fbe.centered_rad(bounds.center() - arc, r, w);
-                                
-                                pair_flip_angle(bounds.center(), bounds.span().x/2.0, &*assets, ae, be, w);
+
+                                pair_flip_angle(
+                                    bounds.center(),
+                                    bounds.span().x / 2.0,
+                                    &*assets,
+                                    ae,
+                                    be,
+                                    w,
+                                );
                             }
                         }),
                         format!("standing on any pair of {aen} and {ben}, flip both."),
@@ -1660,24 +1669,31 @@ pub fn land_hex_smaller_bounds() -> Rect {
         br: a + V2::new(98.913, 87.029),
     }
 }
-pub fn land_specs(assets: &Rc<Assets>, repeating: &[u8]) -> Vec<CardGen> {
+
+const mini_hex_dims: V2 = V2::new(119.063, 119.063);
+const old_hex_dims: V2 = V2::new(317.5, 277.8125);
+pub fn land_specs_smaller(assets: &Rc<Assets>, repeating: &[u8]) -> Vec<CardGen> {
+    land_specs_dims(assets, repeating, mini_hex_dims, land_hex_smaller_bounds())
+}
+pub fn land_specs_card(assets: &Rc<Assets>, repeating: &[u8]) -> Vec<CardGen> {
+    land_specs_dims(assets, repeating, CARD_DIMENSIONS, cutline_bounds())
+}
+pub fn land_specs_dims(assets: &Rc<Assets>, repeating: &[u8], dims: V2, bounds:Rect) -> Vec<CardGen> {
     assert_eq!(repeating.len(), 4);
     let mut r: Vec<CardGen> = Vec::new();
-    fn side(assets: Rc<Assets>, e: ElementTag) -> Rc<impl Fn(&mut dyn Write)> {
-        let mini_hex_dims = V2::new(119.063, 119.063);
-        let old_hex_dims = V2::new(317.5, 277.8125);
-        let rad = land_hex_smaller_bounds().span().min() / 2.0 * 0.98;
+    fn side(assets: Rc<Assets>, e: ElementTag, dims:V2, bounds:Rect) -> Rc<impl Fn(&mut dyn Write)> {
+        let rad = bounds.span().min() / 2.0 * 0.98;
         Rc::new(move |w: &mut dyn Write| {
             svg_outer(
-                mini_hex_dims,
+                dims,
                 ELEMENT_COLORS_BACK[e],
                 &Displaying({
                     let assets = assets.clone();
-                    move |w| {
+                    {let bounds=bounds.clone(); move |w| {
                         assets
                             .element(e)
-                            .centered_rad(land_hex_smaller_bounds().center(), rad, w)
-                    }
+                            .centered_rad(bounds.center(), rad, w)
+                    }}
                 }),
                 w,
             );
@@ -1695,8 +1711,8 @@ pub fn land_specs(assets: &Rc<Assets>, repeating: &[u8]) -> Vec<CardGen> {
                 level: 0,
                 frequency_modifier: 1.0,
                 properties: vec![],
-                generate_front: side(assets.clone(), e),
-                generate_back: side(assets.clone(), eo),
+                generate_front: side(assets.clone(), e, dims, bounds.clone()),
+                generate_back: side(assets.clone(), eo, dims, bounds.clone()),
             }
         })),
     });

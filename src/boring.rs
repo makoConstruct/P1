@@ -3,7 +3,7 @@
 use elementtree::WriteOptions;
 use mako_infinite_shuffle::{Cross, Indexing};
 use nalgebra::{Rotation2, Vector2};
-use std::{f64::consts::TAU, fmt::Display, io::Write, path::Path, rc::Rc};
+use std::{f64::consts::TAU, fmt::Display, fs::File, io::Write, iter, path::Path, rc::Rc};
 
 pub fn from_angle_mag(angle: f64, mag: f64) -> V2 {
     V2::new(angle.cos() * mag, angle.sin() * mag)
@@ -599,6 +599,8 @@ pub enum CardSpecKind {
     Preference,
 }
 pub use CardSpecKind::*;
+
+use crate::clear_or_create;
 #[derive(Clone)]
 pub struct CardSpec {
     // likes: Vec<ElementTag>,
@@ -1383,38 +1385,21 @@ pub fn load_asset(at: &Path, anchor: Option<V2>) -> Asset {
         str::parse(ignore_unit(&svgel.get_attr("width").unwrap())).unwrap(),
         str::parse(ignore_unit(&svgel.get_attr("height").unwrap())).unwrap(),
     );
-    // for se in assetxml.children() { println!("{}", se.tag() ) }
-    if let Some(defel) = svgel.find("{http://www.w3.org/2000/svg}defs") {
-        if defel.child_count() != 0 {
-            println!(
-                "warning: there were defs in {:?}, we don't handle those",
-                at
-            );
-        }
+    let mut inner:Vec<u8> = Vec::new();
+    for e in svgel.children() {
+        e.to_writer_with_options(&mut inner, WriteOptions::new().set_xml_prolog(None)).unwrap();
     }
-    let graphicel = svgel.find("{http://www.w3.org/2000/svg}g").unwrap();
-    //scale proportionally to fit
-    // let placement_bounds = end_graphic_usual_bounds().reduced_by(0.3 * GRAPHIC_RAD);
-    // let scale = (placement_bounds.width() / bounds.x).min(placement_bounds.height() / bounds.y);
-    // let scale = (placement_bounds.width() / CUTLINE_INSET.x).min(placement_bounds.height() / bounds.y);
-    // let offset = placement_bounds.ul + (1.0 - scale) * bounds / 2.0;
-
-    // let offset = placement_bounds.ul + placement_bounds.span() / 2.0 - (bounds * scale) / 2.0;
-
-    let graphic_str = assume_writes_utf8(|w: &mut dyn Write| {
-        graphicel
-            .to_writer_with_options(w, WriteOptions::new().set_xml_prolog(None))
-            .unwrap()
-    });
     Asset {
         render: Rc::new(
             move |ul: V2, scale: f64, rotation: f64, to: &mut dyn Write| {
                 write!(
-                to,
-                r##"<g transform="translate({},{}) scale({scale}) rotate({rotation})">{graphic_str}</g>"##,
-                ul.x, ul.y
-            )
-            .unwrap();
+                    to,
+                    // r##"<g transform="translate({},{}) scale({scale}) rotate({rotation})">{defs_str}{graphic_str}</g>"##,
+                    r##"<g transform="translate({},{}) scale({scale}) rotate({rotation})">"##,
+                    ul.x, ul.y
+                ).unwrap();
+                to.write(&inner).unwrap();
+                write!(to, "</g>").unwrap();
             },
         ),
         anchor: anchor.unwrap_or_else(|| bounds / 2.0),
@@ -1456,6 +1441,7 @@ pub struct Assets {
     pub kill_diamond: Asset,
     pub double_diamond: Asset,
     pub end_top_bar: Asset,
+    pub pnpmask: Asset,
 
     pub field_forest: Asset,
     pub mountain_volcano: Asset,
@@ -1548,10 +1534,6 @@ pub fn ring_conversion(
         style="fill:#{ring_color};fill-opacity:1;stroke-width:1.373;stroke-linecap:round;stroke-linejoin:round"
         d="M 5.0024898e-4,-53.040019 C -29.292895,-53.040234 -53.040026,-29.293293 -53.040122,1.815e-4 -52.987257,19.0527 -42.719728,36.61312 -26.142062,46.003581 l 0.0012,0.0015 c 1.565408,0.935034 2.473643,2.746914 2.488273,4.570258 l 2.013397,-0.018 0.599899,-1.9389 c 6.637789,2.894809 13.7980481,4.39972 21.03956924928,4.422 C 7.2455451,53.018299 14.409426,51.511962 21.050069,48.614381 l 0.600999,1.943 2.013397,0.018 c 0.01463,-1.823344 0.918731,-3.639357 2.484138,-4.574392 l 0.0034,-0.002 C 42.724386,36.606791 52.98763,19.048993 53.040122,1.815e-4 53.040026,-29.293058 29.293261,-53.039902 1.0024957e-4,-53.040019 Z"
         sodipodi:nodetypes="cccccccccccccccc" />
-    <path
-        style="fill:#{background_color};fill-opacity:1;stroke-width:1.3083;stroke-linecap:round;stroke-linejoin:round"
-        d="M -4.9974955e-4,-27.450669 A 27.45077,27.450844 0 0 1 27.45066,3.315e-4 27.45077,27.450844 0 0 1 -4.9974955e-4,27.451131 27.45077,27.450844 0 0 1 -27.45066,3.315e-4 27.45077,27.450844 0 0 1 -4.9974955e-4,-27.450669 Z"
-        id="path4014" />
     {}
     <path
         style="fill:#{background_color};fill-opacity:1;stroke-width:1.41821;stroke-linecap:round;stroke-linejoin:round"
@@ -1683,6 +1665,7 @@ impl Assets {
             void,
             blank,
             come_on_down,
+            pnpmask: load_asset(Path::new("assets/pnpmask.svg"), None),
             back_colored_circle,
             end_top_bar,
             step,
@@ -2088,15 +2071,22 @@ pub fn pair_graphic(
     ).unwrap();
 }
 
-pub fn pair_flip_angle(c:V2, r:f64, assets: &Assets, e1: ElementTag, e2: ElementTag, w: &mut dyn Write) {
+pub fn pair_flip_angle(
+    c: V2,
+    r: f64,
+    assets: &Assets,
+    e1: ElementTag,
+    e2: ElementTag,
+    w: &mut dyn Write,
+) {
     let ptsp = V2::new(91.208817, 115.02631);
     let e1ul = V2::new(0.0, 56.352);
     let e2ul = V2::new(32.535, 0.0);
     let er = 58.674 / 2.0;
     let e1color = ELEMENT_COLORS_BACK[e1];
     let e2ocolor = ELEMENT_COLORS_BACK[opposite_element(e2)];
-    let s: f64 = r/(ptsp.x/2.0);
-    let offset = c - s*ptsp/2.0;
+    let s: f64 = r / (ptsp.x / 2.0);
+    let offset = c - s * ptsp / 2.0;
 
     write!(
         w,
@@ -2381,11 +2371,6 @@ fn element_flip(from: &Asset, to: &Asset) -> Asset {
     }
 }
 
-pub fn all_around_ring(c: V2, color: &str, w: &mut dyn Write) {
-    let er = 67.895;
-    let surround_pos_ = V2::new(-71.861, 26.524) + both_dims(er);
-}
-
 pub fn guy2_mage(assets: &Rc<Assets>, c: V2, scale: f64, w: &mut dyn Write) {
     assets.guy2_mage.by_anchor(c, scale, w);
 }
@@ -2477,117 +2462,73 @@ impl FinalGenConf {
         total
     }
 }
-// considering winnowing down according to constraints
-// deprecated, remove, committing for posterity:
-// this was a waste of time. I should just generate all specs then file them down until the ratios are close to right.
-// // not efficient at all, not sure there's a particularly clever or efficient way of doing this, the core operation fundamentally is to reject a lot of the base distribution
-// fn weighted_sampler<T, I: Iterator<Item=(usize, T)>>(mut i:I, mut rng:impl Rng, buffer_max_size: usize, window_preferred_total_weight: usize)-> impl Iterator<Item=T> {
-//     from_coroutine(move ||{
-//         // initially I hoped that I could recycle elements that weren't picked previously, but for a reasonable constraint on buffer size, this just lead to the output distribution equalling the input distribution. Which I feel like I should, in some sense, have predicted.
 
-//         //fill a buffer that should be representative of the desired distribution
-//         let mut buffer = Vec::with_capacity(buffer_max_size);
-//         loop {
-//             let mut buffer_fullness = 0;
-//             while buffer.len() < buffer_max_size && buffer_fullness < window_preferred_total_weight {
-//                 if let Some(n) = i.next() {
-//                     buffer_fullness += n.0;
-//                     buffer.push(n);
-//                 }else{
-//                     return;
-//                 }
-//             }
-//             if buffer.len() == 0 {
-//                 return;
-//             }
-//             //find and pick the item at a random offset, then throw all the other items away
-//             let r:f64 = rng.gen::<f64>()*(buffer_fullness as f64);
-//             let mut i = 0;
-//             let mut acc = 0;
-//             loop {
-//                 acc += buffer[i].0;
-//                 if acc as f64 >= r {
-//                     let v = buffer.remove(i);
-//                     buffer.clear();
-//                     yield v.1;
-//                     break;
-//                 }
-//                 i += 1;
-//             }
-//         }
-//     })
-// }
-// fn rotate_push<T>(to: &mut VecDeque<T>, v:T)-> Option<T> {
-//     assert!(to.capacity() != 0, "this method uses the capacity of the vecdeque to decide when to start wrapping, so capacity isn't allowed to be zero");
-//     if to.len() == to.capacity() {
-//         let ret = Some(replace(to[0], v));
-//         to.rotate_left(1);
-//         ret
-//     }else{
-//         to.push(v);
-//         None
-//     }
-// }
-// /// total_weight_estimate is an estimate of the sums of the distinct weights that would come up, which is used to increase accuracy of early draws from an incomplete histogram
-// fn bucketed_weighted_sampler<T, I: Iterator<Item=(usize, T)>>(mut i:I, mut rng:impl Rng, total_weight_estimate: usize)-> impl Iterator<Item=T> where T:Default {
-//     from_coroutine(move ||{
-//         //works by keeping a buffer of the last buffer_len seen items
-//         let buffer_len = 7;
-//         //fill a buffer that should be representative of the desired distribution
-//         let mut weight_class_total = 0;
-//         let mut histogram: BTreeMap<usize, VecDeque<T>> = BTreeMap::new();
-//         let draw_entry = |i, histogram, weight_class_total|{
-//             let i = i.next();
-//             histogram.entry(w).or_insert(|| {
-//                 weight_class_total += w;
-//                 VecDeque::with_capacity(buffer_len)
-//             }).and_modify(|s| {
-//                 push_rotate(s, v);
-//             });
-//         };
-//         for _ in 0..buffer_len*buffer_len { //a pretty arbitrary number
-//             draw_entry(&mut i, &mut histogram, &mut weight_class_total);
-//         }
-//         for (w, v) in i {
-//             //restore one for every one you yield
-//             draw_entry(&mut i, &mut histogram, &mut weight_class_total);
-//             let estimated_total_weight = weight_class_total.max(total_weight_estimate);
-//             let r:f64 = rng.gen::<f64>()*estimated_total_weight as f64;
-//             let mut i = 0;
-//             let mut acc = 0;
-//             for &(ref w, ref v) in histogram.iter() {
-//                 acc += w;
-//                 if acc as f64 > r {
+pub struct PnpGen {
+    pub gen_svgs: bool,
+    pub gen_pngs: bool,
+}
 
-//                 }
-//             }
-//             loop {
-//                 acc += histogram[i].0;
-//                 if acc as f64 >= r {
-//                     let v = buffer.remove(i);
-//                     buffer.clear();
-//                     yield v.1;
-//                     break;
-//                 }
-//                 i += 1;
-//             }
-//         }
-//     })
-// }
-// #[cfg(test)]
-// mod test {
-//     use super::*;
-//     #[test]
-//     fn test_weighted_sampling() {
-//         //testing on a distribution where odd numbers should come up 1/6 times as often
-//         //lmao they don't, windowed_sampler method does not work at all
-//         let total = 2000;
-//         let ratio = 6;
-//         let rng = rand::rngs::StdRng::seed_from_u64(38948);
-//         let counted = weighted_sampler((0..).map(|i| if (i%2) == 1 { (1, i) } else { (ratio, i) }), rng, 50, 200 ).take(total).filter(|i| i % 2 == 1).count();
-//         let expected = 1.0/(1 + ratio) as f64;
-//         let got = counted as f64/total as f64;
-//         println!("expected {}, got {}", expected, got);
-//         assert!(expected - 0.05 < got && expected + 0.05 > got);
-//     }
-// }
+pub fn print_and_play_sheets<I>(assets: &Assets, cards: I, output_dir: &Path)
+where
+    I: Iterator<Item = (usize, Rc<Asset>, Rc<Asset>)> + Clone,
+{
+    clear_or_create(output_dir);
+    let (cards_front, cards_back): (Vec<Rc<Asset>>, Vec<Rc<Asset>>) = cards
+        .flat_map(|(r, f, b)| iter::repeat_with(move || (f.clone(), b.clone())).take(r))
+        .unzip();
+    let card_count = cards_front.len();
+    let tx = 6;
+    let ty = 6;
+    let sheets_needed = card_count.div_ceil(tx * ty);
+    let page_dims = V2::new(674.688, 873.125);
+    let cs = assets.pnpmask.bounds;
+    let card_scale = (page_dims.x/tx as f64 / cs.x).min(page_dims.y/ty as f64 / cs.y);
+    let card_span = cs*card_scale;
+
+    let pass = |cards: &Vec<Rc<Asset>>, is_front: bool| {
+        let mut cards = cards.iter();
+        for sheeti in 0..sheets_needed {
+            let side = if is_front { "[face]" } else { "[back]" };
+            let file_name = if sheets_needed == 1 {
+                format!("sheet{side}.svg")
+            } else {
+                format!("sheet#{sheeti}{side}.svg")
+            };
+            let mut w = File::create(output_dir.join(file_name)).unwrap();
+
+            //displayings take immutable fns so we can't do this inline
+            let mut inner = Vec::new();
+
+            'outer: for y in 0..ty {
+                for x in 0..tx {
+                    if let Some(cn) = cards.next() {
+                        let lx = if is_front { x } else { tx - 1 - x };
+                        let ul = V2::new(card_span.x * lx as f64, card_span.y * y as f64);
+                        // write!(
+                        //     &mut inner,
+                        //     r##"<g transform="translate({},{}), scale({card_scale})">"##,
+                        //     ul.x, ul.y
+                        // )
+                        // .unwrap();
+                        // write!(&mut inner, "</g>").unwrap();
+                        cn.by_ul(ul, card_scale, &mut inner);
+                        assets.pnpmask.by_ul(ul, card_scale, &mut inner);
+                    } else {
+                        break 'outer;
+                    }; //checked at function start
+                }
+            }
+
+            svg_outer(
+                page_dims,
+                CARD_BACKGROUND_COLOR,
+                &Displaying(|w| {
+                    w.write_all(&inner).unwrap();
+                }),
+                &mut w,
+            );
+        }
+    };
+    pass(&cards_front, true);
+    pass(&cards_back, false);
+}

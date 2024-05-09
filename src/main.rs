@@ -1,8 +1,10 @@
 #![feature(let_chains, coroutines, iter_from_coroutine, extract_if)]
 
 use std::{
+    collections::HashMap,
     fs::{create_dir, read_dir, remove_file, File},
     io::Write,
+    iter,
     ops::Deref,
     os::unix::ffi::OsStrExt,
     path::Path,
@@ -52,6 +54,7 @@ struct Conf {
     gen_back: bool,
     cut_clip: bool,
     final_gen: Option<Box<FinalGenConf>>,
+    print_and_play_gen: Option<Box<PnpGen>>,
     output: String,
     check_frequencies: bool,
 }
@@ -64,10 +67,30 @@ impl Default for Conf {
             gen_back: true,
             cut_clip: false,
             final_gen: None,
+            print_and_play_gen: None,
             check_frequencies: false,
             output: "generated_card_svgs".to_string(),
         }
     }
+}
+
+fn make_land_counts(spurt: usize, modulo: usize, initial_ratios: &[u8]) -> Vec<u8> {
+    let mut land_counts: Vec<u8> = Vec::from_iter(initial_ratios.iter().cloned());
+    // let cards_per_sheet: u8 = 12; //all that matters for cost is how many sheets you spend
+    let prevtotal = land_counts
+        .iter()
+        .cloned()
+        .map(|i| i as usize)
+        .sum::<usize>()
+        + spurt;
+    let mut free_cards = prevtotal.div_ceil(modulo) * modulo - prevtotal;
+    let mut ci = 0;
+    while free_cards > 0 {
+        land_counts[ci] += 1;
+        free_cards -= 1;
+        ci = (ci + 1) % 4;
+    }
+    land_counts
 }
 
 fn gen_cards(assets: &Rc<Assets>, conf: &Conf) {
@@ -124,25 +147,31 @@ fn gen_cards(assets: &Rc<Assets>, conf: &Conf) {
         ) {
             //generate all possible cards
             prep_clear_dir(output_dir);
-            let cards_by_kind: Vec<Vec<CardSpec>> = cardgens
-                .iter()
-                .map(|g| g.generator.iter().collect())
-                .collect();
-            let mut cardspecs = Vec::new();
             let fconf = &**conf.final_gen.as_ref().unwrap();
-            //set the weights on each individual cardspec according to the rules
-            for (i, mut eg) in cards_by_kind.into_iter().enumerate() {
-                for e in eg.iter_mut() {
-                    e.frequency_modifier *= fconf.frequency_for(&e);
-                }
-                //winnow down those cards by grabbing randomly by weight
-                weighted_sampling::weighted_draws(
-                    &mut eg,
-                    cardgens[i].min_count,
-                    &mut cardspecs,
-                    rng,
-                );
-            }
+
+            // we used to winnow cards based on their weight according to various criteria. Since reducing the deck size (turns out cards cost money) we don't automate this. You can still use the check_frequencies stuff to make sure every land is represented in the appropriate categories though.
+            // let cards_by_kind: Vec<Vec<CardSpec>> = cardgens
+            //     .iter()
+            //     .map(|g| g.generator.iter().collect())
+            //     .collect();
+            // let mut cardspecs = Vec::new();
+            // //set the weights on each individual cardspec according to the rules
+            // for (i, mut eg) in cards_by_kind.into_iter().enumerate() {
+            //     for e in eg.iter_mut() {
+            //         e.frequency_modifier *= fconf.frequency_for(&e);
+            //     }
+            //     //winnow down those cards by grabbing randomly by weight
+            //     weighted_sampling::weighted_draws(
+            //         &mut eg,
+            //         cardgens[i].min_count,
+            //         &mut cardspecs,
+            //         rng,
+            //     );
+            // }
+
+            let cardspecs: Vec<CardSpec> =
+                cardgens.iter().flat_map(|g| g.generator.iter()).collect();
+
             if conf.check_frequencies {
                 // field forest mountain volcano lake ice tomb void
                 let change_dist_preferred = normalize([0.9, 1.0, 0.85, 1.0, 1.5, 1.5, 1.0, 1.18]);
@@ -206,20 +235,23 @@ fn gen_cards(assets: &Rc<Assets>, conf: &Conf) {
             // I changed my mind, not going to have a separate surplus land deck. There'll just be one deck and we'll instruct users to separate the surplus.
             // ack, as part of budgeting, we'll ignore the surplus_counts and just print the amount of excess that we can afford
             // let land_counts: Vec<u8> = fconf.land_counts.iter().zip(fconf.land_surplus_counts.iter()).map(|(a, b)| a + b).collect();
-            let mut land_counts: Vec<u8> = fconf.land_counts.clone();
-            // let cards_per_sheet: u8 = 12; //all that matters for cost is how many sheets you spend
-            let cards_per_sheet: u8 = 60; //all that matters for cost is how many sheets you spend
-            let prevtotal = land_counts.iter().sum::<u8>();
-            let modu = prevtotal % cards_per_sheet;
-            let mut free_cards = if modu == 0 { 0 } else { cards_per_sheet - modu }; //so we get these for free
-            let mut ci = 0;
-            while free_cards > 0 {
-                land_counts[ci] += 1;
-                free_cards -= 1;
-                ci = (ci + 1) % 4;
-            }
+            let cards_per_sheet = 60;
+            let land_counts = make_land_counts(0, cards_per_sheet, &fconf.land_counts);
+
+            // let mut land_counts: Vec<u8> = fconf.land_counts.clone();
+            // // let cards_per_sheet: u8 = 12; //all that matters for cost is how many sheets you spend
+            // let cards_per_sheet: u8 = 60; //all that matters for cost is how many sheets you spend
+            // let prevtotal = land_counts.iter().sum::<u8>();
+            // let modu = prevtotal % cards_per_sheet;
+            // let mut free_cards = if modu == 0 { 0 } else { cards_per_sheet - modu }; //so we get these for free
+            // let mut ci = 0;
+            // while free_cards > 0 {
+            //     land_counts[ci] += 1;
+            //     free_cards -= 1;
+            //     ci = (ci + 1) % 4;
+            // }
             prep_clear_dir(final_land_svgs_path);
-            for spec in generation::land_specs(&assets, &land_counts)[0]
+            for spec in generation::land_specs_smaller(&assets, &land_counts)[0]
                 .generator
                 .iter()
             {
@@ -246,7 +278,7 @@ fn gen_cards(assets: &Rc<Assets>, conf: &Conf) {
                 final_ends_pngs_path,
                 default_svg_to_png,
             );
-            
+
             clear_or_create(final_means_pngs_path);
             render_pngs_with_from_to(
                 final_means_svgs_path,
@@ -258,7 +290,7 @@ fn gen_cards(assets: &Rc<Assets>, conf: &Conf) {
                 final_means_pngs_path,
                 default_svg_to_png,
             );
-            
+
             clear_or_create(final_land_pngs_path);
             render_pngs_with_from_to(
                 final_land_svgs_path,
@@ -276,7 +308,7 @@ fn gen_cards(assets: &Rc<Assets>, conf: &Conf) {
         let debug_output_dir = Path::new(&conf.output);
         prep_clear_dir(debug_output_dir);
         // generates just a small sample (gen_count) of the possible cards for checking
-        let land_specs = generation::land_specs(&assets, &[1, 1, 1, 1]);
+        let land_specs = generation::land_specs_smaller(&assets, &[1, 1, 1, 1]);
         for gen in ends_specs
             .iter()
             .chain(means_specs.iter())
@@ -288,6 +320,81 @@ fn gen_cards(assets: &Rc<Assets>, conf: &Conf) {
             {
                 write_spec(&spec, conf, debug_output_dir);
             }
+        }
+    }
+
+    if let Some(ref pnpconf) = conf.print_and_play_gen {
+        let print_and_play_svgs = Path::new("print_and_play_svgs");
+        if pnpconf.gen_svgs {
+            //because of hand_drawn_cards, we have to read from the generated svg files instead of just using cardspecs
+            clear_or_create(Path::new("print_and_play"));
+            let gather_from = |path, cards: &mut Vec<(usize, Rc<Asset>, Rc<Asset>)>| {
+                let mut by_name = HashMap::new();
+                let dens = read_dir(Path::new(path)).unwrap();
+                for item_m in dens {
+                    if let Ok(item) = item_m {
+                        let fns =
+                            String::from_utf8(Vec::from(item.file_name().as_bytes())).unwrap();
+                        let mut namesplit = fns.split("[");
+                        let name = namesplit.next().unwrap();
+                        let within_brackets = namesplit.next().unwrap().split("]").next().unwrap();
+                        let is_front = within_brackets.contains("face");
+                        let repeat: Option<usize> = within_brackets
+                            .split(",")
+                            .nth(1)
+                            .map(|ns| (ns.split("]").next().unwrap()).parse().unwrap());
+                        let a = Rc::new(load_asset(item.path().as_path(), None));
+                        let entry = by_name
+                            .entry(name.to_string())
+                            .or_insert((None, None, None));
+                        if let Some(r) = repeat {
+                            entry.0 = Some(r);
+                        }
+                        let inserting_to = if is_front { &mut entry.1 } else { &mut entry.2 };
+                        *inserting_to = Some(a)
+                    }
+                }
+                for (s, c) in by_name.into_iter() {
+                    if !c.1.is_some() {
+                        println!("front missing on {s}");
+                    }
+                    if !c.2.is_some() {
+                        println!("back missing on {s}");
+                    }
+
+                    cards.push((c.0.unwrap_or(1), c.1.unwrap(), c.2.unwrap()));
+                }
+            };
+
+            let mut cards: Vec<(usize, Rc<Asset>, Rc<Asset>)> = Vec::new();
+            gather_from(Path::new("final_ends_svgs"), &mut cards);
+            gather_from(Path::new("final_means_svgs"), &mut cards);
+
+            //generate our card-shaped land svgs if needed
+            let land_path = Path::new("land_as_cards");
+            if create_maybe(land_path) {
+                let modulo = 6 * 6;
+                let land_counts = make_land_counts(
+                    cards.iter().map(|c|c.0).sum::<usize>() % modulo,
+                    modulo,
+                    &conf.final_gen.as_ref().unwrap().land_counts,
+                );
+                for spec in generation::land_specs_card(&assets, &land_counts)[0]
+                    .generator
+                    .iter()
+                {
+                    write_spec(&spec, conf, land_path);
+                }
+            }
+            gather_from(land_path, &mut cards);
+            
+            print_and_play_sheets(&assets, cards.into_iter(), print_and_play_svgs);
+        }
+
+        if pnpconf.gen_pngs {
+            let png_path = Path::new("print_and_play_pngs");
+            clear_or_create(png_path);
+            render_pngs_with_from_to(print_and_play_svgs, png_path, svg_to_png_using_inkscape);
         }
     }
 }
@@ -402,9 +509,19 @@ fn clear_or_create(path: &Path) {
     }
 }
 
+fn create_maybe(path: &Path) -> bool {
+    if let Ok(_) = read_dir(&path) {
+        false
+    } else {
+        //create otherwise
+        drop(create_dir(&path));
+        true
+    }
+}
+
 fn render_pngs_with_from_to(from: &Path, to: &Path, renderer: fn(&Path, &Path, &Database)) {
     //clear dir if present
-    
+
     let fonts = get_fonts();
 
     for item_m in read_dir(&from).unwrap() {
@@ -431,8 +548,12 @@ fn main() {
             // final_gen: None,
             final_gen: Some(Box::new(FinalGenConf {
                 gen_svgs: true,
-                gen_pngs: true,
+                gen_pngs: false,
                 ..FinalGenConf::default()
+            })),
+            print_and_play_gen: Some(Box::new(PnpGen {
+                gen_svgs: true,
+                gen_pngs: true,
             })),
             ..Conf::default()
         },
