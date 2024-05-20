@@ -18,6 +18,6 @@ One hope I had was that I'd be able to call resvg and I'd be able to render pngs
 
 If you want to draw some cards entirely in inkscape instead of generating them, we can just put them in "handmade cards". Feel very free to just draw the part of the card that's unique, write a description, and ask me to do the rest.
 
-[install Rust](https://www.rust-lang.org/tools/install) and the [Rubik](https://fonts.google.com/specimen/Rubik) font. Run `cargo run`. You'll also need inkscape to render the `generated_card_svgs` to pngs.
+[install Rust](https://www.rust-lang.org/tools/install) and the [Rubik](https://fonts.google.com/specimen/Rubik) font. Run `cargo run`. You'll also need inkscape to be installed to render the `generated_card_svgs` to pngs.
 
 If you want to make a card, look at other card generation code that generates similar cards and adapt it to your needs. If you need help with understanding rust, we're here for you and you can get us in the [cohabitive games element chat](https://matrix.to/#/#peacewagers:matrix.org). If you need help with inkscape... I'm sorry about inkscape. But I'll try to help.

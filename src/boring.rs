@@ -87,6 +87,16 @@ pub const ELEMENT_NAMES_PLURAL: [&'static str; 8] = [
     "tombs",
     "voids",
 ];
+pub const ELEMENT_NAMES_SINGULAR: [&'static str; 8] = [
+    "field",
+    "forest",
+    "mountain",
+    "volcano",
+    "lake",
+    "sheet of ice",
+    "tomb",
+    "void",
+];
 pub const ELEMENT_PAIR_NAMES: [&'static str; 4] =
     ["field/forest", "mountain/volcano", "lake/ice", "tomb/void"];
 pub fn pair_name_for(e: ElementTag) -> &'static str {
@@ -1385,9 +1395,10 @@ pub fn load_asset(at: &Path, anchor: Option<V2>) -> Asset {
         str::parse(ignore_unit(&svgel.get_attr("width").unwrap())).unwrap(),
         str::parse(ignore_unit(&svgel.get_attr("height").unwrap())).unwrap(),
     );
-    let mut inner:Vec<u8> = Vec::new();
+    let mut inner: Vec<u8> = Vec::new();
     for e in svgel.children() {
-        e.to_writer_with_options(&mut inner, WriteOptions::new().set_xml_prolog(None)).unwrap();
+        e.to_writer_with_options(&mut inner, WriteOptions::new().set_xml_prolog(None))
+            .unwrap();
     }
     Asset {
         render: Rc::new(
@@ -1397,7 +1408,8 @@ pub fn load_asset(at: &Path, anchor: Option<V2>) -> Asset {
                     // r##"<g transform="translate({},{}) scale({scale}) rotate({rotation})">{defs_str}{graphic_str}</g>"##,
                     r##"<g transform="translate({},{}) scale({scale}) rotate({rotation})">"##,
                     ul.x, ul.y
-                ).unwrap();
+                )
+                .unwrap();
                 to.write(&inner).unwrap();
                 write!(to, "</g>").unwrap();
             },
@@ -1509,41 +1521,45 @@ fn generate_either(e1: &Asset, e2: &Asset) -> Asset {
 }
 
 pub fn ring_conversion(
+    assets: &Assets,
     c: V2,
-    r: f64,
-    support: &Asset,
-    ring_color: &str,
-    ring_asset: &Asset,
+    support: ElementTag,
+    ring: ElementTag,
     w: &mut dyn Write,
 ) {
-    let or = 53.04;
-    let s = r / or;
-    let oer = 47.136 / 2.0;
-    let osupport = V2::new(-23.567, -68.429) + both_dims(oer);
-    let oring_element = V2::new(-23.567, 27.126) + both_dims(oer);
-    let background_color = CARD_BACKGROUND_COLOR;
+    let supporto = V2::new(-24.688, -80.945);
+    let supportr = 49.378 / 2.0;
+    let ringo = V2::new(-24.893, 6.962);
+    let ringr = supportr;
+
+    let ring_color = ELEMENT_COLORS_BACK[ring];
+    let flip_from_color = ELEMENT_COLORS_BACK[opposite_element(ring)];
     write!(w, r##"
 <g
-    inkscape:label="Layer 1"
-    inkscape:groupmode="layer"
-    id="layer1"
-    transform="translate({},{}) scale({s})"
-    >
-    <path
-        id="path4028"
-        style="fill:#{ring_color};fill-opacity:1;stroke-width:1.373;stroke-linecap:round;stroke-linejoin:round"
-        d="M 5.0024898e-4,-53.040019 C -29.292895,-53.040234 -53.040026,-29.293293 -53.040122,1.815e-4 -52.987257,19.0527 -42.719728,36.61312 -26.142062,46.003581 l 0.0012,0.0015 c 1.565408,0.935034 2.473643,2.746914 2.488273,4.570258 l 2.013397,-0.018 0.599899,-1.9389 c 6.637789,2.894809 13.7980481,4.39972 21.03956924928,4.422 C 7.2455451,53.018299 14.409426,51.511962 21.050069,48.614381 l 0.600999,1.943 2.013397,0.018 c 0.01463,-1.823344 0.918731,-3.639357 2.484138,-4.574392 l 0.0034,-0.002 C 42.724386,36.606791 52.98763,19.048993 53.040122,1.815e-4 53.040026,-29.293058 29.293261,-53.039902 1.0024957e-4,-53.040019 Z"
-        sodipodi:nodetypes="cccccccccccccccc" />
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate({},{})">
+    <g
+       id="g3"
+       transform="translate(-56.768161,-87.341589)">
+      <path
+         id="path1326"
+         style="fill:#{ring_color};fill-opacity:1;stroke-width:1.56626;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:0.20634"
+         d="M 86.827258,39.182875 A 31.17181,31.171893 0 0 1 56.769145,62.256402 31.17181,31.171893 0 0 1 26.718783,39.215432 56.769489,56.769489 0 0 0 0,87.323089 56.769489,56.769489 0 0 0 56.769661,144.09275 56.769489,56.769489 0 0 0 113.53881,87.323089 56.769489,56.769489 0 0 0 86.827258,39.182875 Z" />
+      <path
+         id="rect1371"
+         style="fill:#{flip_from_color};fill-opacity:1;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:0.20634"
+         d="m 18.361698,128.99514 a 56.769489,56.769489 0 0 0 38.408,15.0973 56.769489,56.769489 0 0 0 38.4074,-15.0973 z" />
+    </g>
     {}
-    <path
-        style="fill:#{background_color};fill-opacity:1;stroke-width:1.41821;stroke-linecap:round;stroke-linejoin:round"
-        d="M 4.0024913e-4,-74.617919 A 29.756683,29.756763 0 0 1 29.757456,-44.861119 29.756683,29.756763 0 0 1 4.0024913e-4,-15.104519 29.756683,29.756763 0 0 1 -29.755856,-44.861119 29.756683,29.756763 0 0 1 4.0024913e-4,-74.617919 Z"
-        id="path4015" />
-    {}
-</g>"##,
+  </g>
+"##,
      c.x, c.y,
-     &Displaying(|w| { ring_asset.centered_rad(oring_element, oer, w); }),
-     &Displaying(|w| { support.centered_rad(osupport, oer, w); }),
+     &Displaying(|w| {
+        assets.flip_to(support).by_grav_rad(supporto, LEFT_TOP, supportr, w);
+        assets.flip_to(ring).by_grav_rad(ringo, LEFT_TOP, ringr, w);
+    }),
    ).unwrap();
 }
 
@@ -2482,8 +2498,8 @@ where
     let sheets_needed = card_count.div_ceil(tx * ty);
     let page_dims = V2::new(674.688, 873.125);
     let cs = assets.pnpmask.bounds;
-    let card_scale = (page_dims.x/tx as f64 / cs.x).min(page_dims.y/ty as f64 / cs.y);
-    let card_span = cs*card_scale;
+    let card_scale = (page_dims.x / tx as f64 / cs.x).min(page_dims.y / ty as f64 / cs.y);
+    let card_span = cs * card_scale;
 
     let pass = |cards: &Vec<Rc<Asset>>, is_front: bool| {
         let mut cards = cards.iter();
@@ -2492,27 +2508,30 @@ where
             let file_name = if sheets_needed == 1 {
                 format!("sheet{side}.svg")
             } else {
-                format!("sheet#{sheeti}{side}.svg")
+                format!("sheet{sheeti}{side}.svg")
             };
             let mut w = File::create(output_dir.join(file_name)).unwrap();
 
             //displayings take immutable fns so we can't do this inline
-            let mut inner = Vec::new();
+            let mut inner_first = Vec::new();
+            let mut inner_second = Vec::new();
 
             'outer: for y in 0..ty {
                 for x in 0..tx {
                     if let Some(cn) = cards.next() {
-                        let lx = if is_front { x } else { tx - 1 - x };
-                        let ul = V2::new(card_span.x * lx as f64, card_span.y * y as f64);
-                        // write!(
-                        //     &mut inner,
-                        //     r##"<g transform="translate({},{}), scale({card_scale})">"##,
-                        //     ul.x, ul.y
-                        // )
-                        // .unwrap();
-                        // write!(&mut inner, "</g>").unwrap();
-                        cn.by_ul(ul, card_scale, &mut inner);
-                        assets.pnpmask.by_ul(ul, card_scale, &mut inner);
+                        // let lx = if is_front { x } else { tx - 1 - x };
+                        let mx = card_span.x * x as f64;
+                        let ul = V2::new(
+                            if is_front {
+                                mx
+                            } else {
+                                page_dims.x - mx - card_span.x
+                            },
+                            card_span.y * y as f64,
+                        );
+                        //render to different buffers to make sure the blur of the cards doesn't overlap any of the masks
+                        cn.by_ul(ul, card_scale, &mut inner_first);
+                        assets.pnpmask.by_ul(ul, card_scale, &mut inner_second);
                     } else {
                         break 'outer;
                     }; //checked at function start
@@ -2523,7 +2542,8 @@ where
                 page_dims,
                 CARD_BACKGROUND_COLOR,
                 &Displaying(|w| {
-                    w.write_all(&inner).unwrap();
+                    w.write_all(&inner_first).unwrap();
+                    w.write_all(&inner_second).unwrap();
                 }),
                 &mut w,
             );

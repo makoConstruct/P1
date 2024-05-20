@@ -4,7 +4,6 @@ use std::{
     collections::HashMap,
     fs::{create_dir, read_dir, remove_file, File},
     io::Write,
-    iter,
     ops::Deref,
     os::unix::ffi::OsStrExt,
     path::Path,
@@ -135,8 +134,9 @@ fn gen_cards(assets: &Rc<Assets>, conf: &Conf) {
         let final_land_pngs_path = Path::new("final_land_pngs");
         let final_ends_hand_made_svgs_path = Path::new("hand_made_cards/ends");
         let final_means_hand_made_svgs_path = Path::new("hand_made_cards/means");
-        let final_surplus_land_svgs_path = Path::new("final_surplus_land_svgs");
-        let final_surplus_land_pngs_path = Path::new("final_surplus_land_pngs");
+        // don't bother generating two distinct land decks for this print run, too expensive
+        // let final_surplus_land_svgs_path = Path::new("final_surplus_land_svgs");
+        // let final_surplus_land_pngs_path = Path::new("final_surplus_land_pngs");
 
         fn do_cards(
             run_name: &str,
@@ -297,12 +297,6 @@ fn gen_cards(assets: &Rc<Assets>, conf: &Conf) {
                 final_land_pngs_path,
                 default_svg_to_png,
             );
-            clear_or_create(final_surplus_land_pngs_path);
-            render_pngs_with_from_to(
-                final_surplus_land_svgs_path,
-                final_surplus_land_pngs_path,
-                default_svg_to_png,
-            );
         }
     } else {
         let debug_output_dir = Path::new(&conf.output);
@@ -375,7 +369,7 @@ fn gen_cards(assets: &Rc<Assets>, conf: &Conf) {
             if create_maybe(land_path) {
                 let modulo = 6 * 6;
                 let land_counts = make_land_counts(
-                    cards.iter().map(|c|c.0).sum::<usize>() % modulo,
+                    cards.iter().map(|c| c.0).sum::<usize>() % modulo,
                     modulo,
                     &conf.final_gen.as_ref().unwrap().land_counts,
                 );
@@ -387,7 +381,7 @@ fn gen_cards(assets: &Rc<Assets>, conf: &Conf) {
                 }
             }
             gather_from(land_path, &mut cards);
-            
+
             print_and_play_sheets(&assets, cards.into_iter(), print_and_play_svgs);
         }
 
@@ -548,7 +542,7 @@ fn main() {
             // final_gen: None,
             final_gen: Some(Box::new(FinalGenConf {
                 gen_svgs: true,
-                gen_pngs: false,
+                gen_pngs: true,
                 ..FinalGenConf::default()
             })),
             print_and_play_gen: Some(Box::new(PnpGen {

@@ -1,20 +1,30 @@
-# P1: rules
+# the optimal weave
 
-## generally
+# 0.1
+
+# how to
+
+<br>
+
+# generally
 
 The play objective is to pursue your character's desires and see how much you can optimize the board-world towards perfection. The real objective, which comes as a result of pursuing the play objective, is to practice dealing with conflict in a lawless place, to learn to weave harmony amid exposed difference.
 
-You may wish to try playing with or without contracts. Contracts are agreements that two players can make where one player will take a -10 point punishment if a specified event occurs, or if they fail to hold up their end of an exchange. With contracts, P1 can be seen as an anarchic blank canvas onto which players may experiment in scribbling their own laws and learning what works.
+You may wish to try playing with or without contracts. Contracts are agreements that two players can make where one player will take a -10 point punishment if a specified event occurs, or if they fail to hold up their end of an exchange. With contracts, Optimal Weave can be seen as an anarchic blank canvas onto which players may experiment in scribbling their own laws and learning what works.
 
 As players improve, they should introduce more complex abilities, desires and scenarios. If a player's average score over the past five games they played is above par for their current level, they transcend to the next level.
 
-## level 1
+# level 1
 
-Start by having the game leader lay out land tiles in a spiraling hexagonal pattern in front of them, with radius 3 (a central tile and then three hexagonal layers around it). The following illustrations show how players' pieces should be laid out for different player counts.
+Start by having the game leader lay out land tiles a hexagonal pattern in front of them, with radius 3 (a central tile and then three hexagonal layers around it).
+
+Try to keep the composition of the land fairly consistent. In the default radius-3 hex board composition, there are 15 field/forest tiles, 8 mountain/volcano tiles, 7 lake/ice tiles, and 7 tomb/void tiles.
+
+The following illustrations show how players' agents (pieces) should initially be positioned for different player counts.
 
 ![](agent_placement.svg)
 
-<span class="caption">It's important that nobody starts out within immediate reach of another, as some characters may eat others.</span>
+<span class="caption">It's important that no agent starts out within immediate reach of another, as some characters may eat others.</span>
 
 Take care not to use any cards marked <span><img class="inline_img" src="level2.svg"></span>. I think their behaviors make the game a bit too complicated for a first session.
 
@@ -81,9 +91,19 @@ To make things easier at first, you may wish to keep your characters' ability ca
 </div>
 </div>
 
-The cohabitive genre (which P1 characterizes) is so unexplored that I think you will have an interesting experience just landing anywhere. I encourage players to look for new interesting variants of play, and to come and tell us what you found in the <a class="element_link" href="https://matrix.to/#/#peacewagers:matrix.org">element channel</a>.
+The cohabitive genre (which Optimal Weave characterizes) is so unexplored that I think you will have an interesting experience just landing anywhere. I encourage players to look for new interesting variants of play, and to come and tell us what you found in the <a class="element_link" href="https://matrix.to/#/#peacewagers:matrix.org">element channel</a>.
 
-## level 2
+For the explorers, I should mention some ideas we'd be eager to see tried, but which we aren't sure how to implement yet:
+
+- simultaneous moves, so that everyone can negotiate with whoever they need to in parallel over the course of a minute. The discourse will be so chaotic and vibrant! Players place an action card marked with one of their special paperclips onto the land they want to affect. At the end of the phase; the actions fire.
+
+- Introducing more abilities over the course of the game. Sometimes randomly sampled abilities wont enable a person to pursue their goals, and we'll all be willing to allow new abilities to be introduced. There will be some kind of mechanism that allows people to fight against the introduction of abilities that don't break the power balance. Just not sure which to use.
+
+- How about some Gaianism: Sometimes the world itself will have a desire, which is part of everyone's score. It might make some gameplay sense to tilt things a little bit in favor of cooperation. It would make it all feel more respectful towards the land and its whims.
+
+- It feels like it needs some sort of climax, something we're going to find out at the end. The current climax of just finding out whether you have enough time to complete your plans isn't very satisfying. <br> The other prototype, [Final Autumn Together](https://www.thegamecrafter.com/games/final-autumn-together), did this by having the player roll a D20. If their score was above it, they "survived". This made the score goal viscerally meaningful while still mapping it to linear utility. The story was that the score represented the number of days supplies the players had collected, and the dice represented the length of an ocean journey they'd have to undertake alone before making landfall. I can't think of a similar story for Optimal Weave though. What punishes you for not enacting your preferences enough? Your shadow? (*It doesn't! As long as you were doing your best! Otherwise it might.*)
+
+# level 2
 
 After scoring consistently above 15 on level 1, you may "transcend" to level 2.
 
@@ -105,24 +125,25 @@ After scoring consistently above 15 on level 1, you may "transcend" to level 2.
 
 - Also consider increasing the number of desires or abilities players have, as this always tends to make finding the optimal solution more complex.
 
+- Play larger games with more players.
+
 - Reduce the amount of time people have per turn.
 
 - Adjust board size to taste.
 
-## Ritual
+# Ritual
 
-A separate game using some of the parts of P1.
+A separate game using some of the parts of Optimal Weave.
 
 Ritual Cohabitive is simple but deep. Its purpose is to quickly test the negotiation skills of the table, perhaps as a prelude to an important negotiation, or a new friendship. There's often benefit in exhibiting a demonstration that all participants are capable of good faith negotiation. When there is common knowledge of this, expectations will be heightened, and similar performance will be expected as you continue on into your inevitably foggier real-world collaborations.
 
 Games are brief. At the end of the game, scrutinize and discuss the negotiation outcome. If it was unfair to you, well, that is one thing. But if it was too generous to you, that's a very different thing. Either case is an omen. Consider playing another round.
 
-### Rules
+## Rules
 
 Setup: Lay out a random board of radius 3 (that's 37 land cards).
 
-<div class="row" style="flex-wrap: wrap; align-items:start;">
-<div style="flex-basis:210px; flex-grow:1; flex-shrink:0;">
+![](p1_ritual_board.svg)
 
 Give each player:
 
@@ -130,9 +151,6 @@ Give each player:
 
 - if there are just two players, give each 3 or 4 flip all abilities. If there are three or more players, give them each 2.
 
-</div>
-<img style="flex-basis:145px; flex-grow:1; flex-shrink:1; width:100%; max-width:230px;" src="p1_ritual_board.svg">
-</div>
 
 Each turn, each player may activate two of their flip actions. (Ignore the rule stating that the player must be standing on the pattern, the player has no earthly agents, in Ritual, and can flip any matching pattern.)
 
@@ -140,7 +158,7 @@ The game goes on for just 4 rounds if there are two players, 3 rounds if there a
 
 After that, no further actions can be taken, the outcome is determined.
 
-## Pieces
+# Pieces
 
 The official names for the teams of agent pieces we've bundled with the game are:
 
@@ -149,5 +167,15 @@ The official names for the teams of agent pieces we've bundled with the game are
 <span style="color:#eeeeee;">●</span> Church (or "Sunday") <br>
 <span style="color:#e2cfa2;">●</span> Wood (or "Halma") <br>
 <span style="color:#3a3a3a;">●</span> Entities (or "Lollards")
+
+## What are voids? What are tombs?
+
+Some say that each voidland is a place where a great hole has been torn all the way to the shadowed heart of the earth. Others say that a void represents something more abstract, a wound in the body of justice or memory, festering and cursing its site.
+
+And I've heard some say that tombs are places that a good spirit protects, or monuments to a great act of redemption.
+
+Personally, I think the voids are nuclear wrecks. Failed machines that killed their builders and now spew radiation in every direction. I think the tombs are containment mounds, and if we could build more tombs we would be able to make those lands safe to traverse again.
+
+But I haven't been able to find anyone else who will come work beside the voids with me.
 
 <span class="caption">2024. All assets available under GPLv3. <a href="https://dreamshrine.org" style="color: inherit;">dream shrine</a> are open to negotiating other licenses if needed.</span>
