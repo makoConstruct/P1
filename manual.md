@@ -1,18 +1,20 @@
-# the optimal weave
+# optimal weave
 
 # 0.1
 
 # how to
-
-<br>
-
-# generally
 
 The play objective is to pursue your character's desires and see how much you can optimize the board-world towards perfection. The real objective, which comes as a result of pursuing the play objective, is to practice dealing with conflict in a lawless place, to learn to weave harmony amid exposed difference.
 
 You may wish to try playing with or without contracts. Contracts are agreements that two players can make where one player will take a -10 point punishment if a specified event occurs, or if they fail to hold up their end of an exchange. With contracts, Optimal Weave can be seen as an anarchic blank canvas onto which players may experiment in scribbling their own laws and learning what works.
 
 As players improve, they should introduce more complex abilities, desires and scenarios. If a player's average score over the past five games they played is above par for their current level, they transcend to the next level.
+
+# before the first game
+
+Your land tiles will be sooty from the laser cutting. Wipe the soot off of the edges of your land tiles onto a damp towel.
+
+Separate cards marked with <span><img class="inline_img" src="clown.svg"></span> and set them aside for later. These cards are *clowns* and should only be played for novelty later on once you understand the ways they disrupt the game.
 
 # level 1
 
@@ -76,7 +78,21 @@ When the game ends (when the clock hand reaches 12), reflect. Calculate your sco
 
 To make things easier at first, you may wish to keep your characters' ability cards together for the next game you play. Instead of rerolling an entirely new character, you may prefer to just play a mutation of your previous abilities or desires by replacing a random one with a random new one. It's much easier to orient yourself in a new situation if it's a variation on a scenario you've played recently.
 
-## free exploration
+## the mindset of play
+
+Part of the challenge of our praxis is managing the mindset of other players. Not all of your players will understand that win-win bargaining is possible, they will carry the mindset of more common zero-sum games where a player can only "win" by getting a higher score than others. Here are a few handy sayings that may help you in these situations.
+
+*"The objective within the game is just to score as much as possible. The real objective, pursued as a consequence, is to learn the way of negotiation, to strive towards the optimal weave."*
+
+*"Reducing others' scores will not increase your own."*
+
+*"The game is kind of cooperative, but subtly crucially not."*
+
+*"More than one person can win. You win whenever you get the best feasible outcome for yourself. You lose if you miss opportunities and fall far short of that. If there's war, mutual assured punishments let loose, then everyone can be said to have lost."*
+
+Don't be too frustrated with players who need to be told these things, for you shall meet such players in life, as well, so relish any opportunity to practice in the lifting of crabs from their buckets, it's a necessary art.
+
+## developer corner
 
 <div style="position:relative;">
 
@@ -91,17 +107,49 @@ To make things easier at first, you may wish to keep your characters' ability ca
 </div>
 </div>
 
-The cohabitive genre (which Optimal Weave characterizes) is so unexplored that I think you will have an interesting experience just landing anywhere. I encourage players to look for new interesting variants of play, and to come and tell us what you found in the <a class="element_link" href="https://matrix.to/#/#peacewagers:matrix.org">element channel</a>.
+We still don't really know how to make Cohabitive games, and Optimal Weave is not quite a complete design. It functions, but it takes a bit more effort and learning to access its depths than I would like. Players often have to learn to read the board and the desire cards quite well before they can start to perceive interesting tradeoffs.
 
-For the explorers, I should mention some ideas we'd be eager to see tried, but which we aren't sure how to implement yet:
+So let's all explore the cohabitive genre and develop this game together! I encourage players to look for new interesting variants of play, and to come and tell us what you found in the <a class="element_link" href="https://matrix.to/#/#peacewagers:matrix.org">element channel</a>.
 
-- simultaneous moves, so that everyone can negotiate with whoever they need to in parallel over the course of a minute. The discourse will be so chaotic and vibrant! Players place an action card marked with one of their special paperclips onto the land they want to affect. At the end of the phase; the actions fire.
+For the explorers, here's a verdant list of ideas we'd be eager to see tried and brewed, but which we aren't sure how to implement yet:
 
-- Introducing more abilities over the course of the game. Sometimes randomly sampled abilities wont enable a person to pursue their goals, and we'll all be willing to allow new abilities to be introduced. There will be some kind of mechanism that allows people to fight against the introduction of abilities that don't break the power balance. Just not sure which to use.
+- simultaneous moves, so that everyone can negotiate with whoever they need to in parallel over the course of a minute. The discourse will be so chaotic and vibrant! The challenge of efficient communication will be centered! Players place an action card marked with one of their special paperclips or standee stands onto the land they want to affect. At the timed end of the phase; the actions fire.
 
-- How about some Gaianism: Sometimes the world itself will have a desire, which is part of everyone's score. It might make some gameplay sense to tilt things a little bit in favor of cooperation. It would make it all feel more respectful towards the land and its whims.
+- Introduce abilities gradually over the course of the game. This addresses a few problems: The exhausting pause at the beginning of a game while players assess each and every one of their and their opponents' abilities and the relationships between them before being able to make a single decision well. Prevents the game from stagnating or becoming doomed for a lack of useful abilities. Reuses established state to build towards an ever richer game.
+
+    - We may want mechanics that allow people to fight against the introduction of abilities that break the power balance. I look forward to the contracts people will pen here, eg, "you can have this ability if you promise to only use it in constrained ways", this essentially constitutes the design of new abilities.
+    
+        - Experiment with vetos and votes of support. This may warrant additional mechanics. Having to navigate a tradeoff between getting your own abilities and controlling the abilities others can take would be an interesting alegory for contemporary regulatory dilemmas (assuming those are real dilemmas, though I'm not sure they are. They always end up seeming like a result of incompetence in system design).
+    
+        - Making acquisition vetoes just a natural consequence of the base mechanics of movement and violence may be a good idea. I just can't see how to fit it onto the board. How can we place abilities into the landscape? Another call for card stands.
+
+- How about some Gaianism: Sometimes the world itself will have a desire, which is part of everyone's score. It might make some gameplay sense to tilt things a little bit in favor of cooperation. It would make it all feel more respectful towards the land and its whims. But I don't think this is necessary.
 
 - It feels like it needs some sort of climax, something we're going to find out at the end. The current climax of just finding out whether you have enough time to complete your plans isn't very satisfying. <br> The other prototype, [Final Autumn Together](https://www.thegamecrafter.com/games/final-autumn-together), did this by having the player roll a D20. If their score was above it, they "survived". This made the score goal viscerally meaningful while still mapping it to linear utility. The story was that the score represented the number of days supplies the players had collected, and the dice represented the length of an ocean journey they'd have to undertake alone before making landfall. I can't think of a similar story for Optimal Weave though. What punishes you for not enacting your preferences enough? Your shadow? (*It doesn't! As long as you were doing your best! Otherwise it might.*)
+
+- I sense a need for a lot of work on how the game ends. Ending after a fixed number of moves isn't fun, because it makes the whole game about timing, and the ending time often doesn't correspond with the point at which the game starts or stops being interesting, so let's try things along these lines:
+    
+    - I'm seriously interested in randomizing the time of the end of the game in some way:
+    
+        - Why: 
+            
+            - Becuse where peace is maintained by the promise of punishment, between greedy agents, peace will always collapse on the final turn, as the last mover knows that the other player wont have a chance to punish their defection, but this means the second to last player, knowing that the last player will detect, has no reason to cooperate and defects first, and so it is the same for the third to last player, and so on, until the first player decides they may as well defect on the first turn. Even if you can avoid this ridiculous defect-by-induction chain, so much about diplomacy becomes about timing. I don't like this. One solution to this is to not be a greedy agent, and to be honorable instead, by holding ever true to the optimal policy to have always implemented, but explaining why it is rational to be honorable is beyond the scope of this manual, so let's consider a rule that works for greedy players too: If you **randomize the length of the game**, so that players do not know the day or the hour, players always have to fear punishment and behave honorably, and the game is less about precise timing.
+        
+            - There's also a delicious *memento mori* vibe to it. Live each turn like it might be your last!
+    
+        - You could just have players roll a d20 after every turn then end the game if they roll a 1, which would mean a 25% chance of ending after 5 moves, 50% after 14 moves, and 90% after 45 moves. Oh. Well, that amount of variance is pretty bad, isn't it. We could just have players start rolling a meaner D6 after the 5th turn, but it reintroduces the need to remember to move the turn counter during the first part of the game.
+        
+        - I messed around with some simulations and found that flipping a coin but counting 6 hits gets us a nicely (uniformly? Yes, probably!) random end time. It rarely stretches on longer than 26 turns, and of course never ends before 6 turns, but players never have much certainty that it's about to end, but they're also never much in the dark about how many turns remain. I still think the variance here is too high.
+        
+    - Giving players a means of ending the game at some random chance would be a way of preventing too much exploitation from transpiring, but I guess that could make the game too cooperative, denying players the experience of encountering real power asymmetries.
+    
+    - I'd like something that allowed players to score a certain minimal amount by ending early, such that this is a preferable move if they're only going to be scoring very small amounts. This works if we can assume that an endgame where not much is being scored is a boring endgame that should be skipped, but I'm not sure we *can* assume that.
+    
+    - Tough problem!
+
+    - Timing might be less annoying to strategize over, though, if each player had a resource (cubes) representing how many moves *they personally* had remaining. If you did this, you could also experiment with modes of play where players are able to conserve or expend resources depending on how much they want to do that turn, balancing near against far.
+
+- Consider reusing state between sessions. The game involves learning a lot of intricate strategic relationships, throwing those away before each game seems like an inefficient use of brain. Retaining desires especially makes sense, though. If you're taking average cumulative score over multiple games to get a metric of player skill, since a lot of the randomness in player scores is due to the desires they've been assigned, make sure to not take more than one score from stretches of games where players use the same desires.
 
 # level 2
 
@@ -130,6 +178,8 @@ After scoring consistently above 15 on level 1, you may "transcend" to level 2.
 - Reduce the amount of time people have per turn.
 
 - Adjust board size to taste.
+
+- See the [Developer Corner](#developer-corner) section and get experimenting!
 
 # Ritual
 

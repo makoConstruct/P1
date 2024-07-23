@@ -83,7 +83,7 @@ pub const ELEMENT_NAMES_PLURAL: [&'static str; 8] = [
     "mountains",
     "volcanoes",
     "lakes",
-    "ice sheets",
+    "ice",
     "tombs",
     "voids",
 ];
@@ -93,7 +93,7 @@ pub const ELEMENT_NAMES_SINGULAR: [&'static str; 8] = [
     "mountain",
     "volcano",
     "lake",
-    "sheet of ice",
+    "ice",
     "tomb",
     "void",
 ];
@@ -832,7 +832,7 @@ r##"
        height="1.0815393">
       <feGaussianBlur
          inkscape:collect="always"
-         stdDeviation="3.7080208"
+         stdDeviation="3.4"
          id="feGaussianBlur5" />
     </filter>
   </defs>
@@ -847,8 +847,10 @@ r##"
        id="assetback"
        transform="matrix(1.1024306,0,0,1.1024306,0,2e-4)"
        style="fill:#f1f2f2;fill-opacity:1;stroke-width:0.24" />
-    <g transform="matrix(-1,0,0,1,{span},0)" style="opacity:0.27;filter:url(#flipfilter)">
-    {end_bar}
+    <g transform="matrix(-1,0,0,1,{span},0)" style="opacity:0.55;filter:url(#flipfilter)">
+    <g style="opacity:0.5">
+        {end_bar}
+    </g>
     {inserting}
     </g>
     {level_marker}
@@ -1451,6 +1453,7 @@ pub struct Assets {
     pub step: Asset,
     pub dog_altruism: Asset,
     pub kill_diamond: Asset,
+    pub kill_diamond_around: Asset,
     pub double_diamond: Asset,
     pub end_top_bar: Asset,
     pub pnpmask: Asset,
@@ -1529,7 +1532,7 @@ pub fn ring_conversion(
 ) {
     let supporto = V2::new(-24.688, -80.945);
     let supportr = 49.378 / 2.0;
-    let ringo = V2::new(-24.893, 6.962);
+    let ringo = V2::new(-supportr, 7.248);
     let ringr = supportr;
 
     let ring_color = ELEMENT_COLORS_BACK[ring];
@@ -1627,6 +1630,7 @@ impl Assets {
             Some(V2::new(27.316, 80.938)),
         );
         let kill_diamond = load_asset(&Path::new("assets/kill_diamond.svg"), None);
+        let kill_diamond_around = load_asset(&Path::new("assets/kill_diamond_around.svg"), None);
         let double_diamond = load_asset(&Path::new("assets/double_diamond.svg"), None);
 
         let guy2_flipped = horizontal_flip(&guy2);
@@ -1661,6 +1665,7 @@ impl Assets {
             clown,
             guy,
             guy2,
+            kill_diamond_around,
             guy2_mage,
             guy2_flipped,
             dead_guy2,
@@ -2042,7 +2047,17 @@ pub fn chain_graphic(
     ).unwrap();
 }
 
-pub fn pair_graphic(
+// pub fn pair_graphic(
+//     a: ElementTag,
+//     b: ElementTag,
+//     aa: &Asset,
+//     ba: &Asset,
+//     center: V2,
+//     r: f64,
+//     w: &mut dyn Write,
+// ) {
+
+pub fn joined_pair_graphic_horizontal(
     assets: &Assets,
     a: ElementTag,
     b: ElementTag,
@@ -2087,7 +2102,7 @@ pub fn pair_graphic(
     ).unwrap();
 }
 
-pub fn pair_flip_angle(
+pub fn pair_flip_verticalish(
     c: V2,
     r: f64,
     assets: &Assets,
@@ -2095,12 +2110,33 @@ pub fn pair_flip_angle(
     e2: ElementTag,
     w: &mut dyn Write,
 ) {
+    joined_pair_verticalish(
+        c, r,
+        &|c, r, w|{
+            assets.flip_to(e1).centered_rad(c, r, w);
+        },
+        &|c, r, w|{
+            assets.flip_to(e2).centered_rad(c, r, w);
+        },
+        ELEMENT_COLORS_BACK[e1],
+        ELEMENT_COLORS_BACK[opposite_element(e2)],
+        w
+    );
+}
+
+pub fn joined_pair_verticalish(
+    c: V2,
+    r: f64,
+    bottom: &impl Fn(V2, f64, &mut dyn Write),
+    top: &impl Fn(V2, f64, &mut dyn Write),
+    first_color:&str,
+    second_color:&str,
+    w:&mut dyn Write,
+) {
     let ptsp = V2::new(91.208817, 115.02631);
     let e1ul = V2::new(0.0, 56.352);
     let e2ul = V2::new(32.535, 0.0);
     let er = 58.674 / 2.0;
-    let e1color = ELEMENT_COLORS_BACK[e1];
-    let e2ocolor = ELEMENT_COLORS_BACK[opposite_element(e2)];
     let s: f64 = r / (ptsp.x / 2.0);
     let offset = c - s * ptsp / 2.0;
 
@@ -2114,20 +2150,20 @@ pub fn pair_flip_angle(
      >
     <path
        id="b1"
-       style="fill:#{e1color};fill-opacity:1;stroke-width:1.34089;stroke-linecap:round;stroke-linejoin:round"
+       style="fill:#{first_color};fill-opacity:1;stroke-width:1.34089;stroke-linecap:round;stroke-linejoin:round"
        d="m 27.126323,60.042925 12.763138,7.368804 12.762687,7.368543 2.158524,-3.738668 c -0.749677,-1.250877 -1.153637,-2.678457 -1.170455,-4.136683 3e-6,-1.577935 0.45355,-3.122628 1.306636,-4.450099 1.514563,-2.356641 2.762693,-4.566998 5.564047,-4.566867 0.0249,0.0027 0.0497,0.0055 0.07447,0.0084 l 2.135789,-3.699285 -11.401692,-6.582768 -11.62897,-6.713989 -2.132423,3.693474 c 1.509157,2.556139 0.390952,5.07205 -1.092344,7.643288 -1.485071,2.57022 -4.239008,4.14172 -7.207264,4.112849 z"
        sodipodi:nodetypes="cccccsccccccccc" />
     <path
        id="a1"
-       style="fill:#{e2ocolor};stroke-width:1.34089;stroke-linecap:round;stroke-linejoin:round"
+       style="fill:#{second_color};stroke-width:1.34089;stroke-linecap:round;stroke-linejoin:round"
        d="m 36.423951,43.938969 a 8.2314434,8.2314558 30 0 1 0.04182,8.298104 l 18.301337,10.566276 a 8.2314558,8.2314434 0 0 1 0.179747,-0.348527 8.2314558,8.2314434 0 0 1 6.925053,-3.781098 8.2314558,8.2314434 0 0 1 0.07447,0.0084 L 64.082154,54.982836 51.319466,47.614292 38.556333,40.245498 Z" />
    {}
   </g>"##,
     offset.x, offset.y,
         &Displaying({
             |w| {
-                assets.flip_to(e1).centered_rad(e1ul + both_dims(er), er, w);
-                assets.flip_to(e2).centered_rad(e2ul + both_dims(er), er, w);
+                top(e2ul + both_dims(er), er, w);
+                bottom(e1ul + both_dims(er), er, w);
             }
         })
     ).unwrap();
@@ -2416,6 +2452,7 @@ pub struct FinalGenConf {
     pub water_ice_changing_cards: f64,
     pub cards_that_make_voids: f64,
     pub cards_that_make_tombs: f64,
+    pub land_tile_shape: &'static str,
     pub land_counts: Vec<u8>,
     pub land_surplus_counts: Vec<u8>,
     pub gen_svgs: bool,
@@ -2431,6 +2468,7 @@ impl Default for FinalGenConf {
             kill_cards_for_void_volcano: 3.8,
             kill_cards_for_field: 0.9,
             kill_cards_for_tombs: 0.1,
+            land_tile_shape: "circle",
             kill_cards_for_mountain: 0.2,
             water_ice_changing_cards: 3.0,
             cards_that_make_voids: 2.6,

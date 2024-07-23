@@ -251,7 +251,12 @@ fn gen_cards(assets: &Rc<Assets>, conf: &Conf) {
             //     ci = (ci + 1) % 4;
             // }
             prep_clear_dir(final_land_svgs_path);
-            for spec in generation::land_specs_smaller(&assets, &land_counts)[0]
+            let land_gen = match fconf.land_tile_shape {
+                "hex" => generation::land_specs_smaller,
+                "circle" => generation::land_specs_mini_circles,
+                e => panic!("invalid land hex shape {}", e),
+            };
+            for spec in land_gen(&assets, &land_counts)[0]
                 .generator
                 .iter()
             {
@@ -538,17 +543,16 @@ fn main() {
             output: "generated_card_svgs".to_string(),
             seed: 879,
             gen_front: true,
-            gen_back: true,
-            // final_gen: None,
+            gen_back: false,
             final_gen: Some(Box::new(FinalGenConf {
                 gen_svgs: true,
-                gen_pngs: true,
+                // gen_pngs: true,
                 ..FinalGenConf::default()
             })),
-            print_and_play_gen: Some(Box::new(PnpGen {
-                gen_svgs: true,
-                gen_pngs: true,
-            })),
+            // print_and_play_gen: Some(Box::new(PnpGen {
+            // gen_svgs: true,
+            // gen_pngs: true,
+            // })),
             ..Conf::default()
         },
     );
