@@ -93,7 +93,7 @@ pub fn end_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
         generator: Box::new(IndexVec(vec![VOLCANO, VOID, LAKE]).into_map({
             let all_assets = all_assets.clone();
             move |e| {
-                let scores = "10".to_string();
+                let scores = "14".to_string();
                 let ename = ELEMENT_NAMES[e];
                 CardSpec::end_card_with_back_blurred_message(
                     &all_assets,
@@ -153,7 +153,7 @@ pub fn end_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                     scores.clone(),
                     1,
                     format!(
-                        "1 point for each land included in a chain of {aname}, {bname}, {cname}",
+                        "1 point for each land included in a chain of {aname}, {bname}, {cname} (multiple chains may overlap, but don't count any land more than once)",
                     ),
                     vec![a,b,c],
                     2,
@@ -169,7 +169,7 @@ pub fn end_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
         generator: Box::new(IndexVec(vec![FIELD, LAKE, FOREST]).into_map({
             let all_assets = all_assets.clone();
             move |e| {
-                let scores = "10".to_string();
+                let scores = "13".to_string();
                 let ename_plural = ELEMENT_NAMES_PLURAL[e];
                 let ename = ELEMENT_NAMES[e];
                 CardSpec::end_card_with_back_blurred_message(
@@ -277,6 +277,23 @@ pub fn end_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
             }),
         ),
     });
+    
+    specs.push(CardGen { min_count: 5, desired_proportion: 0.0, generator: Box::new({let all_assets = all_assets.clone(); IndexVec(vec![()]).into_map(move |()| {
+        CardSpec::end_card_with_back_blurred_message(
+            &all_assets,
+            "interventionist".to_string(),
+            Rc::new({
+                let all_assets = all_assets.clone();
+                Displaying(move |w| {
+                    all_assets.interventionist_helix.centered(end_graphic_usual_bounds_shrunk_appropriately().center(), 1.0, w);
+                })
+            }),
+            "8-1".into(),
+            1,
+            format!("You care about every little thing. Score 8 points for each lake, 7 for each tomb, and so on; mountain:6, volcano:5, ice:4, forest:3, void:2, field:1, and score 2 points for very surviving agent."),
+            vec![FIELD, FOREST, MOUNTAIN, VOLCANO, LAKE, ICE, TOMB, VOID], 2, true,
+        )
+    })})});
 
     specs.push(CardGen { min_count: 2, desired_proportion: 0.0, generator: Box::new(IndexVec(vec![(ICE, FIELD, TOMB), (VOLCANO, MOUNTAIN, FOREST)]).into_map({
         let all_assets = all_assets.clone();
@@ -323,7 +340,7 @@ pub fn end_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                 ).unwrap();
             })),
             "1".to_string(),1,
-            format!("1 point for every {element_name} in the largest connected cluster of {element_name_plural}"),
+            format!("1 point for every {element_name} in the single largest connected cluster of {element_name_plural} ({element_name_plural} outside of that cluster is valueless)"),
             vec![e],
             0, false
         )
@@ -384,11 +401,9 @@ pub fn end_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
             .into_map({
                 let all_assets = all_assets.clone();
                 move |(e1, e2)| {
-                    let scores = "8".to_string();
+                    let scores = "10".to_string();
                     let en1 = ELEMENT_NAMES[e1];
-                    let en1_plural = ELEMENT_NAMES_PLURAL[e1];
                     let en2 = ELEMENT_NAMES[e2];
-                    let en2p = ELEMENT_NAMES_PLURAL[e2];
                     CardSpec::end_card_with_back_blurred_message(
                         &all_assets,
                         format!("forbid_{en1}_{en2}"),
@@ -407,7 +422,7 @@ pub fn end_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                         scores.clone(),
                         1,
                         format!(
-                            "{} points if there are no {en1_plural} adjacent to {en2p} at the end",
+                            "{} points if there is no {en1} adjacent to any {en2} at the end",
                             &scores
                         ),
                         vec![opposite_element(e1), opposite_element(e2)],
@@ -429,7 +444,6 @@ pub fn end_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                 (TOMB, FOREST),
                 (ICE, VOLCANO),
                 (VOLCANO, LAKE),
-                (LAKE, FOREST),
             ])
             .into_map({
                 let assets = all_assets.clone();
@@ -496,7 +510,7 @@ pub fn end_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                 .into_map({
                     let assets = all_assets.clone();
                     move |(e1, e2, e3)| {
-                        let scores = "5".to_string();
+                        let scores = "4".to_string();
                         let en1 = ELEMENT_NAMES[e1];
                         let en2 = ELEMENT_NAMES[e2];
                         let en3 = ELEMENT_NAMES[e3];
@@ -584,13 +598,13 @@ pub fn end_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
             String::from("scavenger"),
             3,
             "4".to_string(),
-            String::from("a terrible hunger\n4 points for every dead agent"),
+            String::from("a terrible hunger.\n4 points for every agent you kill\n(your own agents don't count)"),
             vec![],
             0,
             false,
         ))),
     });
-    specs.push(CardGen { min_count: 8, desired_proportion: 0.0, generator: Box::new(Once(from_asset(&all_assets, &assets.altruism, String::from("altruism"), 2, "=".to_string(), String::from("Your values encompass the values of others.\n\nScore the sum of the scores of others"), vec![], 1, true)))});
+    specs.push(CardGen { min_count: 8, desired_proportion: 0.0, generator: Box::new(Once(from_asset(&all_assets, &assets.altruism, String::from("altruism"), 2, "=".to_string(), String::from("Your values encompass the values of others.\n\nScore the sum of the scores of all other agencies"), vec![], 1, true)))});
 
     specs.push(CardGen {
         min_count: 8,
@@ -618,7 +632,7 @@ pub fn end_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                     "1".to_string(),
                     1,
                     format!(
-                        "1 point for every {e1n} or {e2n} in the largest contiguous patch of them."
+                        "1 point for every {e1n} or {e2n} in the largest connected patch of those land types."
                     ),
                     vec![e1, e2],
                     2,
@@ -642,7 +656,7 @@ pub fn end_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
             }
         })),
         "=".to_string(), 2,
-        "You share the desires of the players adjacent to you, but only when they're adjacent to you. If they're moved away, you will stop caring about those things.".to_string(),
+        "You share the desires of the players adjacent to you, but only when they're adjacent to you. As soon as you're apart, you will stop caring about those things.".to_string(),
         vec![],
         2,
         true
@@ -684,7 +698,7 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                     guy2_dead(&assets, c2, guyscale, w);
                 })
             },
-            format!("standing in a {element_name}, kill one agent in the same land, or an adjacent land"),
+            format!("standing in {element_name}, kill one nearby agent"),
         )
     }}))});
 
@@ -715,7 +729,7 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                     guy2_dead(&assets, bdc + V2::new(0.0, bdr*0.57), 1.0, w);
                 })
             },
-            format!("while in the same land as another agent, and near {pair_name}, kill the agent"),
+            format!("Kill an agent in the same land as you, when near to {pair_name}"),
         )
     }}))});
 
@@ -745,12 +759,12 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                         // all_assets.guy2.centered_rad(eyc, eyr, w);
                     }
                 }),
-                format!("standing near {opposite_name}, transition it to {element_name}"),
+                format!("standing nearby to {opposite_name}, flip it to {element_name}"),
             )
         }
     }))});
     
-    r.push(CardGen { min_count: 8, desired_proportion: 0.0, generator: Box::new(IndexVec(vec![ICE]).into_map({
+    r.push(CardGen { min_count: 8, desired_proportion: 0.0, generator: Box::new(IndexVec(vec![LAKE]).into_map({
         let all_assets = all_assets.clone();
         move |e| {
             let element_name = ELEMENT_NAMES[e];
@@ -771,7 +785,7 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                         f.centered(center, 1.0, w); 
                     }
                 }),
-                format!("transition any {opposite_name} to {element_name}"),
+                format!("flip any {opposite_name} to {element_name}"),
             )
         }
     }))});
@@ -863,7 +877,7 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                     assets.triangle.by_grav(m, LEFT_MIDDLE, side, w);
                 }
             }),
-            format!("standing near a pair of {an} and {bn}, the land on either side of the pair can be flipped"),
+            format!("standing near a pair of {an} and {bn}, one land near to both lands on either side, or one of those lands of the pair, can be flipped"),
         )
     }}))});
 
@@ -898,7 +912,7 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                         );
                     }
                 }),
-                format!("standing in {supporting_element_name}, flip a near {opposite_name}/{element_name}"),
+                format!("standing in {supporting_element_name}, flip a nearby {opposite_name}/{element_name}"),
             )
         }
     }))});
@@ -936,7 +950,7 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                         );
                     }
                 }),
-                format!("standing in {supporting_element_name}, transit a near {opposite_name} to {element_name}"),
+                format!("standing in {supporting_element_name}, flip a nearby {opposite_name} to {element_name}"),
             )
         }
     }))});
@@ -984,7 +998,7 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
         }
     }))});
 
-    r.push(CardGen { min_count: 8, desired_proportion: 0.0, generator: Box::new(IndexVec(vec![((FIELD, FOREST), VOID), ((LAKE, ICE), MOUNTAIN)]).into_map({let assets=all_assets.clone(); move |((e, es), a)|{
+    r.push(CardGen { min_count: 8, desired_proportion: 0.0, generator: Box::new(IndexVec(vec![(FIELD, VOID), (LAKE, MOUNTAIN)]).into_map({let assets=all_assets.clone(); move |(e, es)|{
         let en = ELEMENT_NAMES[e];
         let esn = ELEMENT_NAMES[es];
         CardSpec::means_card(
@@ -1000,10 +1014,10 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                 let sep = br*0.14;
                 let ac = bounds.center() + from_angle_mag(TAU*3.0/8.0*0.87, br + sep + ar);
                 asset.element(e).centered_rad(bounds.center(), br, w);
-                asset.element(a).centered_rad(ac, ar, w);
+                asset.element(es).centered_rad(ac, ar, w);
                 asset.kill_diamond_around.centered(bounds.center(), 1.0, w);
             }}),
-            format!("kill any number of agents standing nearby to {en} that's adjacent to {esn}."),
+            format!("kill any number of agents standing near to {en} that's adjacent to {esn}."),
         )
     }}))});
     
@@ -1033,7 +1047,7 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                                 .centered_rad(bounds.center(), br * 1.2, w);
                         }
                     }),
-                    format!("kill any number of agents standing on any of the {enp}."),
+                    format!("kill any number of agents standing on any {enp}."),
                 )
             }
         })),
@@ -1059,7 +1073,7 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                 asset.kill_diamond.centered_rad(bounds.center(), br*1.2, w);
                 asset.element(a).centered_rad(ac, ar, w);
             }}),
-            format!("kill any number of agents standing on any {enp} land that's adjacent to {an}."),
+            format!("kill any number of agents standing on any {enp} that's adjacent to {an}."),
         )
     }}))});
 
@@ -1088,7 +1102,7 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                 asset.double_diamond.centered_rad(bc, dr, w);
                 guy2(&asset, bc, 1.0, w);
             }}),
-            format!("standing in {ekn}, near to {esn}, kill an agent within two land tiles of where you stand."),
+            format!("standing in {ekn}, near to {esn}, kill an agent within two steps of where you stand."),
         )
     }}))});
 
@@ -1119,7 +1133,7 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                 asset.double_diamond.centered_rad(bc, dr, w);
                 guy2(&asset, bc, 1.0, w);
             }}),
-            format!("standing in {ekn} near to {estn}, kill an agent within two land tiles of where you stand, flipping the {estn}."),
+            format!("standing in {ekn} near to {estn}, kill an agent within two steps of where you stand, flipping the {estn}."),
         )
     }}))});
 
@@ -1339,7 +1353,7 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                             guy2(&asset, bc, 1.0, w);
                         }
                     }),
-                    format!("standing in {ekn} near {esn}, flip a near land."),
+                    format!("standing in {ekn} near {esn}, flip a nearby land."),
                 )
             }
         })),
@@ -1489,7 +1503,7 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                 // assets.blank.centered_rad(gc, ger, w);
                 assets.guy2.by_anchor_rad(gc, ger*0.9, w);
             }}),
-            format!("transition a near {opposite_name} to {element_name}, moving each occupant of that land up to three lands"),
+            format!("flip a nearby {opposite_name} to {element_name}, moving each occupant of that land up to three lands"),
         )
     }}))});
     
@@ -1578,7 +1592,7 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                 // assets.blank.centered_rad(gc, ger, w);
                 assets.guy2.by_anchor_rad(gc, ger*0.9, w);
             }}),
-            format!("transition a near {opposite_name} to {element_name}, moving each occupant of that land up to two lands"),
+            format!("flip a nearby {opposite_name} to {element_name}, moving each occupant of that land up to two lands"),
         )
     }}))});
     
@@ -1615,7 +1629,7 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                 // assets.blank.centered_rad(gc, ger, w);
                 assets.guy2.by_anchor_rad(gc, ger*0.9, w);
             }}),
-            format!("move each occupant of a near {element_name} up to three lands"),
+            format!("move each occupant of a nearby {element_name} up to three lands"),
         )
     }}))});
     
@@ -1674,7 +1688,7 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                 do_arr(V2::new(bc.x + ard, aby - arsep));
                 do_arr(V2::new(bc.x - ard, aby - arsep*2.0));
             }}),
-            format!("extract the energy from a lake, freezing it and moving its occupants up to three lands over"),
+            format!("freeze any lake, moving its occupants up to three lands over"),
         )
     }}))});
 
@@ -1700,8 +1714,9 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                             come_on_down_specifically(
                                 assets.element(e),
                                 assets.element(e),
-                                e,
+                                ELEMENT_COLORS_BACK[e],
                                 means_graphic_usual_bounds(),
+                                None, None,
                                 w,
                             );
                         }
@@ -1729,13 +1744,41 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                     come_on_down_specifically(
                         all_assets.flip_to(e),
                         all_assets.element(et),
-                        e,
+                        ELEMENT_COLORS_BACK[e],
                         means_graphic_usual_bounds(),
+                        None, None,
                         w,
                     );
                 }
             }),
-            format!("pick any {eon}, and send anyone standing on it to any {etn}, flipping the {eon} to {en}"),
+            format!("pick any {eon}, and send anyone standing on it to any {etn}, flipping the originating {eon}"),
+        )
+    }}))});
+    
+    r.push(CardGen { min_count: 8, desired_proportion: 0.0, generator: Box::new(IndexVec(vec![TOMB]).into_map({let all_assets = all_assets.clone(); move|e|{
+        let en = ELEMENT_NAMES[e];
+        // let etn = ELEMENT_NAMES[es];
+        CardSpec::means_card(
+            &all_assets,
+            format!("{en} banishment"),
+            Some(format!("sending {en}")),
+            0, false, 1,
+            vec![(Move, vec![e])],
+            Rc::new({
+                let all_assets = all_assets.clone();
+                move |w| {
+                    come_on_down_specifically(
+                        &all_assets.darker_blank,
+                        all_assets.element(e),
+                        DARKER_BLANK_COLOR,
+                        means_graphic_usual_bounds(),
+                        Some(&all_assets.guy2),
+                        None,
+                        w,
+                    );
+                }
+            }),
+            format!("send anyone on a nearby land to any {en}"),
         )
     }}))});
     
@@ -1764,40 +1807,6 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
     //         "move to an adjacent land".to_string(),
     //     ))),
     // });
-
-    r.push(CardGen {
-        min_count: 4,
-        desired_proportion: 0.0,
-        generator: Box::new(IndexVec(vec![((TOMB, FOREST), FOREST)]).into_map({
-            let assets = all_assets.clone();
-            move |((e1, e2), e1p)|{
-                let e1oa = ELEMENT_ARTICLE[opposite_element(e1)];
-                let e1on = ELEMENT_NAMES[opposite_element(e1)];
-                let e2on = ELEMENT_NAMES[opposite_element(e2)];
-                let e2oa = ELEMENT_ARTICLE[opposite_element(e2)];
-                let e1pn = ELEMENT_NAMES[e1p];
-                let e1n = ELEMENT_NAMES[e1];
-                let e2n = ELEMENT_NAMES[e2];
-                let assets = assets.clone();
-                CardSpec::means_card(&assets, format!("{} surge", e1on), Some(format!("surge {e1pn} {e1n} {e2n}")), 
-                2, true, 1, vec![(Change, vec![e1, e2])], Rc::new({let assets = assets.clone(); move |w|{
-                    let bounds = means_graphic_usual_bounds_shrunk_appropriately();
-                    let fr = bounds.span().min()*0.24;
-                    let sep = bounds.span().min()*0.057;
-                    let e2y = bounds.ul.y + fr;
-                    let e1y = e2y + 2.0*fr + sep;
-                    let e1c = V2::new(bounds.center().x, e1y);
-                    let adylr = bounds.span().min()*0.17;
-                    assets.element(e1p).centered_rad(e1c + from_angle_mag(TAU/2.0 - TAU*0.13, fr + sep + adylr), adylr, w);
-                    assets.flip_to(e1).centered_rad(e1c, fr, w);
-                    assets.flip_to(e2).centered_rad(V2::new(bounds.center().x, e2y), fr, w);
-                    let gc = e1c + from_angle_mag(TAU/12.0, fr + sep + GUY2_RAD);
-                    assets.blank.centered_rad(gc, adylr, w);
-                    guy2_flipped(&assets, gc, GUY2_ADJACENCY_SMALLERNESS, w);
-                }}), format!("standing near {e1oa} {e1on} that's also adjacent to {e1pn} and {e2oa} {e2on}, flip the {e1on} and the {e2on}"))
-            }
-        })),
-    });
 
     r.push(CardGen {
         min_count: 9,
@@ -1854,7 +1863,7 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                                 fce.centered(c + from_angle_mag(tilt + arc * 2.0, r), scale, w);
                             }
                         }),
-                        format!("standing on any chain of {aeon}, {beon}, {ceon}, flip all at once."),
+                        format!("standing on any chain of {aeon}, {beon}, {ceon}, flip all of them."),
                     )
                 }
             }),
@@ -1875,12 +1884,12 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
             .into_map({
                 let assets = all_assets.clone();
                 move |(ae, be)| {
-                    let aen = ELEMENT_NAMES[ae];
-                    let ben = ELEMENT_NAMES[be];
+                    let aeon = ELEMENT_NAMES[opposite_element(ae)];
+                    let beon = ELEMENT_NAMES[opposite_element(be)];
                     CardSpec::means_card(
                         &assets,
                         "flip both".to_string(),
-                        Some(format!("flip_both_{aen}_{ben}")),
+                        Some(format!("flip_both_{aeon}_{beon}")),
                         1,
                         // the ones that just sort of move an element along through a limited substrate without changing the total number of either are extraordinarily weak
                         ae == opposite_element(be),
@@ -1901,7 +1910,7 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                                 );
                             }
                         }),
-                        format!("When standing on a pair of {aen} and {ben}, flip it."),
+                        format!("When standing on a pair of {aeon} and {beon}, flip them."),
                     )
                 }
             }),
@@ -1929,7 +1938,7 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                     horizontal_flip(&all_assets.cubed_guy2).by_anchor(c + V2::new(lateral, 0.0), guy_scale, w);
                 }
             }),
-            format!("Near to {ename} that is also near to an opponent's agent, capture that agent and replace their agent with a spare of your own. All of your agents can now use that player's abilities."),
+            format!("Near to {ename} that is also near to an opponent's agent, capture that agent and replace it with a spare of your own. All of your agents can now use that player's abilities."),
         )
     })})});
     
@@ -1948,10 +1957,10 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
 }
 
 pub fn land_circle_bounds() -> Rect {
-    let a = V2::new(9.0, 9.0);
+    let a = V2::new(9.922, 9.922);
     Rect {
         ul: a,
-        br: a + V2::new(90.0,90.0),
+        br: a + V2::new(99.219, 99.219),
     }
 }
 pub fn land_hex_old_bounds() -> Rect {
@@ -1971,7 +1980,7 @@ pub fn land_hex_smaller_bounds() -> Rect {
 
 const mini_hex_dims: V2 = V2::new(119.063, 119.063);
 const old_hex_dims: V2 = V2::new(317.5, 277.8125);
-const mini_circle_dims: V2 = V2::new(108.0, 108.0);
+const mini_circle_dims: V2 = V2::new(119.063, 119.063);
 pub fn land_specs_smaller(assets: &Rc<Assets>, repeating: &[u8]) -> Vec<CardGen> {
     land_specs_dims(assets, repeating, mini_hex_dims, land_hex_smaller_bounds(), false)
 }

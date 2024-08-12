@@ -16,6 +16,7 @@ mod boring;
 pub use boring::*;
 mod generation;
 mod weighted_sampling;
+use noisy_float::prelude::*;
 
 use mako_infinite_shuffle::{rng::LFSRFNTimes, Indexing, OpsRef, Shuffled};
 
@@ -49,6 +50,7 @@ impl Weighted<CardSpec> for CardSpec {
 struct Conf {
     seed: u64,
     gen_count: usize,
+    micro_deck: bool,
     gen_front: bool,
     gen_back: bool,
     cut_clip: bool,
@@ -63,6 +65,7 @@ impl Default for Conf {
             seed: 80,
             gen_count: 1,
             gen_front: true,
+            micro_deck: false,
             gen_back: true,
             cut_clip: false,
             final_gen: None,
@@ -134,6 +137,8 @@ fn gen_cards(assets: &Rc<Assets>, conf: &Conf) {
         let final_land_pngs_path = Path::new("final_land_pngs");
         let final_ends_hand_made_svgs_path = Path::new("hand_made_cards/ends");
         let final_means_hand_made_svgs_path = Path::new("hand_made_cards/means");
+        let final_endings_hand_made_svgs_path = Path::new("hand_made_cards/end events");
+        let final_endings_hand_made_pngs_path = Path::new("final_endings_pngs");
         // don't bother generating two distinct land decks for this print run, too expensive
         // let final_surplus_land_svgs_path = Path::new("final_surplus_land_svgs");
         // let final_surplus_land_pngs_path = Path::new("final_surplus_land_pngs");
@@ -147,7 +152,6 @@ fn gen_cards(assets: &Rc<Assets>, conf: &Conf) {
         ) {
             //generate all possible cards
             prep_clear_dir(output_dir);
-            let fconf = &**conf.final_gen.as_ref().unwrap();
 
             // we used to winnow cards based on their weight according to various criteria. Since reducing the deck size (turns out cards cost money) we don't automate this. You can still use the check_frequencies stuff to make sure every land is represented in the appropriate categories though.
             // let cards_by_kind: Vec<Vec<CardSpec>> = cardgens
@@ -252,14 +256,10 @@ fn gen_cards(assets: &Rc<Assets>, conf: &Conf) {
             // }
             prep_clear_dir(final_land_svgs_path);
             let land_gen = match fconf.land_tile_shape {
-                "hex" => generation::land_specs_smaller,
-                "circle" => generation::land_specs_mini_circles,
-                e => panic!("invalid land hex shape {}", e),
+                TileShape::Hex => generation::land_specs_smaller,
+                TileShape::Circle => generation::land_specs_mini_circles,
             };
-            for spec in land_gen(&assets, &land_counts)[0]
-                .generator
-                .iter()
-            {
+            for spec in land_gen(&assets, &land_counts)[0].generator.iter() {
                 write_spec(&spec, conf, final_land_svgs_path);
             }
 
@@ -302,6 +302,13 @@ fn gen_cards(assets: &Rc<Assets>, conf: &Conf) {
                 final_land_pngs_path,
                 default_svg_to_png,
             );
+
+            clear_or_create(final_endings_hand_made_pngs_path);
+            render_pngs_with_from_to(
+                final_endings_hand_made_svgs_path,
+                final_endings_hand_made_pngs_path,
+                default_svg_to_png,
+            );
         }
     } else {
         let debug_output_dir = Path::new(&conf.output);
@@ -323,6 +330,10 @@ fn gen_cards(assets: &Rc<Assets>, conf: &Conf) {
     }
 
     if let Some(ref pnpconf) = conf.print_and_play_gen {
+        assert!(
+            conf.gen_back && conf.gen_front && conf.final_gen.is_some(),
+            "you don't have enough dependencies activated to generate pnp"
+        );
         let print_and_play_svgs = Path::new("print_and_play_svgs");
         if pnpconf.gen_svgs {
             //because of hand_drawn_cards, we have to read from the generated svg files instead of just using cardspecs
@@ -368,22 +379,24 @@ fn gen_cards(assets: &Rc<Assets>, conf: &Conf) {
             let mut cards: Vec<(usize, Rc<Asset>, Rc<Asset>)> = Vec::new();
             gather_from(Path::new("final_ends_svgs"), &mut cards);
             gather_from(Path::new("final_means_svgs"), &mut cards);
+            gather_from(Path::new("hand_made_cards/ends"), &mut cards);
+            gather_from(Path::new("hand_made_cards/means"), &mut cards);
+            gather_from(Path::new("hand_made_cards/end events"), &mut cards);
 
-            //generate our card-shaped land svgs if needed
+            //generate our card-shaped land svgs
             let land_path = Path::new("land_as_cards");
-            if create_maybe(land_path) {
-                let modulo = 6 * 6;
-                let land_counts = make_land_counts(
-                    cards.iter().map(|c| c.0).sum::<usize>() % modulo,
-                    modulo,
-                    &conf.final_gen.as_ref().unwrap().land_counts,
-                );
-                for spec in generation::land_specs_card(&assets, &land_counts)[0]
-                    .generator
-                    .iter()
-                {
-                    write_spec(&spec, conf, land_path);
-                }
+            clear_or_create(land_path);
+            let modulo = 6 * 6;
+            let land_counts = make_land_counts(
+                cards.iter().map(|c| c.0).sum::<usize>() % modulo,
+                modulo,
+                &conf.final_gen.as_ref().unwrap().land_counts,
+            );
+            for spec in generation::land_specs_card(&assets, &land_counts)[0]
+                .generator
+                .iter()
+            {
+                write_spec(&spec, conf, land_path);
             }
             gather_from(land_path, &mut cards);
 
@@ -444,7 +457,7 @@ fn demo_boards(assets: &Rc<Assets>) {
     );
 }
 
-use rand::{rngs::StdRng, SeedableRng};
+use rand::{rngs::StdRng, RngCore, SeedableRng};
 use resvg::usvg::fontdb::Database;
 
 use crate::generation::weights_to_cuts;
@@ -534,30 +547,97 @@ fn render_pngs_with_from_to(from: &Path, to: &Path, renderer: fn(&Path, &Path, &
     }
 }
 
+fn gen_store_background(conf: &Conf, assets: &Assets) {
+    // unit is one element separation
+    let dimensions = V2::new(1600.0, 600.0);
+    let element_radp = 0.9;
+    let desired_span_count = 47;
+    let element_sep = dimensions.x/desired_span_count as f64;
+    let element_rad = element_radp*element_sep / 2.0;
+    let guy_rad = element_rad*0.7;
+    let center = dimensions / 2.0;
+    let max_rad = dimensions.magnitude() / 2.0;
+    let mut out = File::create(&Path::new("store_background.svg")).unwrap();
+    let once_through = conf.final_gen.as_ref().unwrap().land_counts.iter();
+    let elements_on_selection = once_through.clone().chain(once_through).take(7);
+    let desired_element_total:usize = elements_on_selection.clone().map(|e| *e as usize).sum();
+    do_sheet(
+        dimensions,
+        &Displaying(move |w| {
+            let mut spiraller = HexSpiral::new();
+            let mut rng = StdRng::seed_from_u64(90);
+            let mut draws: Vec<(V2, Box<dyn Fn(&mut StdRng, &Assets, &mut dyn Write)>)> = Vec::new();
+            loop {
+                let p = hexify(spiraller.next().unwrap().to_v2())*element_sep;
+                if p.magnitude() > 1.4 * max_rad {
+                    break;
+                }
+                let pp = center + p;
+                //sample according to desired element frequencies
+                let mut select_element_at =
+                    (rng.next_u64() as usize % desired_element_total) as isize;
+                let mut ei = 0;
+                // let once_through = conf.final_gen.as_ref().unwrap().land_counts.iter();
+                // let land_types_iter = (once_through.clone().chain(once_through)).enumerate();
+                for (eii, ed) in elements_on_selection.clone().enumerate() {
+                    select_element_at -= *ed as isize;
+                    if select_element_at <= 0 {
+                        ei = eii;
+                        break;
+                    }
+                }
+                draws.push((pp, Box::new(move |rng, assets, w|{
+                    assets.element(ei).centered_rad(pp, element_rad, w);
+                })));
+                // if rng.next_u64() % 28 == 0 {
+                //     draws.push((pp, Box::new(move |rng, assets, w|{
+                //         let guy_a = (if rng.next_u64() % 2 == 1 {
+                //             &assets.guy2
+                //         } else {
+                //             &assets.guy2_flipped
+                //         });
+                //         guy_a.by_anchor_rad(pp, guy_rad, w);
+                //     })))
+                // }
+            }
+            draws.sort_by_key(|a| N64::new(a.0.y));
+            for d in draws {
+                d.1(&mut rng, assets, w);
+            }
+        }),
+        &mut out,
+    );
+}
+
 fn main() {
     let assets = Rc::new(Assets::load(Path::new("assets")));
-
+    let gen_pngs = true;
+    let conf = Conf {
+        output: "generated_card_svgs".to_string(),
+        seed: 879,
+        micro_deck: false,
+        gen_front: true,
+        gen_back: true,
+        final_gen: Some(Box::new(FinalGenConf {
+            gen_svgs: true,
+            gen_pngs,
+            ..FinalGenConf::default()
+        })),
+        print_and_play_gen: Some(Box::new(PnpGen {
+            gen_svgs: true,
+            gen_pngs,
+        })),
+        ..Conf::default()
+    };
     gen_cards(
         &assets,
-        &Conf {
-            output: "generated_card_svgs".to_string(),
-            seed: 879,
-            gen_front: true,
-            gen_back: false,
-            final_gen: Some(Box::new(FinalGenConf {
-                gen_svgs: true,
-                // gen_pngs: true,
-                ..FinalGenConf::default()
-            })),
-            // print_and_play_gen: Some(Box::new(PnpGen {
-            // gen_svgs: true,
-            // gen_pngs: true,
-            // })),
-            ..Conf::default()
-        },
+        &conf,
     );
+    // gen_store_background(&conf, &assets);
     // svg_to_png_using_resvg(&Path::new("simple-case.svg"), &Path::new(""), &get_fonts())
     // render_pngs_with_inkscape();
     // render_pngs_with_resvg();
     // demo_boards(&assets);
+
+    // svg_to_png_using_inkscape(&Path::new("hand_made_cards/end events/endings_continue[face,28].svg"), &Path::new("uh.png"), &get_fonts());
 }

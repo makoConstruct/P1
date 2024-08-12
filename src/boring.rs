@@ -21,6 +21,10 @@ pub fn rotate(rotation: V2, v: V2) -> V2 {
 pub fn both_dims(v: f64) -> V2 {
     V2::new(v, v)
 }
+pub fn scale_sqrad(dims: V2, to_rad:f64)-> f64 {
+    // s*dims.x*s*dims.y = to_rad*to_rad
+    ((to_rad*to_rad)/(dims.x*dims.y)).sqrt()
+}
 /// scale_fit(a, b)*a fits within b
 pub fn scale_fit(v: V2, bounds: V2) -> f64 {
     (bounds.x.abs() / v.x.abs()).min(bounds.y.abs() / v.y.abs())
@@ -110,6 +114,7 @@ pub const BOLD_COLOR_FOR_GRAPHIC: &'static str = "c3c3c3";
 pub const ELEMENT_COLORS_FRONT: [&'static str; 8] = [
     "a3e2a7", "7eb47f", "e5e383", "f2b7b7", "a5dae0", "f4fcfd", "dedede", "414141",
 ];
+pub const DARKER_BLANK_COLOR: &'static str = "c1c1c1";
 pub const fn element_colors_bold(i: ElementTag) -> &'static str {
     if i != ICE && i != TOMB {
         ELEMENT_COLORS_FRONT[i]
@@ -773,34 +778,36 @@ pub fn backing(
     is_end: bool,
 ) {
     let span = CARD_DIMENSIONS.x;
-    let marker_rad = span * 0.1;
-    let sep = span * 0.017;
+    let sep = span * 0.05;
     let level_marker = Displaying(|w| {
+        let origin = cutline_bounds().br - V2::new(0.0, span*0.13);
         let mut offset = 0.0;
         if level >= 2 {
-            assets.level2.by_grav_rad(
-                cutline_bounds_shrunk_appropriately().br,
-                RIGHT_BOTTOM,
-                marker_rad,
+            let r = assets.level2.bounds.x/2.0;
+            assets.level2.centered(
+                origin + V2::new(-(offset + sep + r), 0.0),
+                1.0,
                 w,
             );
-            offset += marker_rad * 2.0 + sep;
-        } else if level == 1 {
-            assets.level1.by_grav_rad(
-                cutline_bounds_shrunk_appropriately().br + V2::new(-offset, 0.0),
-                RIGHT_BOTTOM,
-                marker_rad,
+            offset += sep + r*2.0;
+        }
+        if level == 1 {
+            let r = assets.level1.bounds.x/2.0;
+            assets.level1.centered(
+                origin + V2::new(-(offset + sep + r), 0.0),
+                1.0,
                 w,
             );
-            offset += marker_rad * 2.0 + sep;
+            offset += sep + r*2.0;
         }
         if clown {
-            assets.clown.by_grav_rad(
-                cutline_bounds_shrunk_appropriately().br + V2::new(-offset, 0.0),
-                RIGHT_BOTTOM,
-                marker_rad,
+            let r = assets.clown.bounds.x/2.0;
+            assets.clown.centered(
+                origin + V2::new(-(offset + sep + r), 0.0),
+                1.0,
                 w,
             );
+            offset += sep + r*2.0;
         }
     });
     let end_bar = Displaying({
@@ -1387,7 +1394,7 @@ impl Asset {
 
 pub fn load_asset(at: &Path, anchor: Option<V2>) -> Asset {
     // pub fn for_asset(at: &std::path::Path) -> Rc<dyn Display> {
-    let assetxml = elementtree::Element::from_reader(&std::fs::File::open(at).unwrap()).unwrap();
+    let assetxml = elementtree::Element::from_reader(&std::fs::File::open(at).unwrap()).unwrap_or_else(|e| panic!("couldn't parse {:?}. {:?}", at, e));
     //lol, turns out the comment isn't an element so the entire document is just the root element (what if a document contains multiple root elements? Is that not allowed?)
     let svgel = &assetxml;
     fn ignore_unit(v: &str) -> &str {
@@ -1440,6 +1447,7 @@ pub struct Assets {
     pub field: Asset,
     pub forest: Asset,
     pub mountain: Asset,
+    pub interventionist_helix: Asset,
     pub volcano: Asset,
     pub lake: Asset,
     pub ice: Asset,
@@ -1590,9 +1598,9 @@ impl Assets {
         let negatory = load_asset(&Path::new("assets/negatory_shadowed.svg"), None);
         let level2 = load_asset(&Path::new("assets/level_22.svg"), None);
         let level1 = load_asset(&Path::new("assets/level1.svg"), None);
-        let clown = load_asset(&Path::new("assets/clown.svg"), None);
+        let clown = load_asset(&Path::new("assets/clown_in_diamond.svg"), None);
         let guy = load_asset(&Path::new("assets/guy.svg"), None);
-        let guyeye = load_asset(&Path::new("assets/guyeye.svg"), None);
+        let guyeye: Asset = load_asset(&Path::new("assets/guyeye.svg"), None);
         let dead_guy = load_asset(&Path::new("assets/dead_guy.svg"), None);
         let altruism = load_asset(&Path::new("assets/altruism.svg"), None);
         let field = load_asset(&Path::new("assets/field.svg"), None);
@@ -1615,14 +1623,14 @@ impl Assets {
         // let step = load_asset(&Path::new("assets/step.svg"), None);
         let step = load_asset(&Path::new("assets/step2.svg"), None);
         let dog_altruism = load_asset(&Path::new("assets/dog_altruism.svg"), None);
-        // let guy2 = load_asset(&Path::new("assets/guy2.svg"), None);
         let guy2 = load_asset(&Path::new("assets/guy2_flat.svg"), Some(GUY2_ANCHOR));
-        // let guy2_mage = load_asset(&Path::new("assets/guy2_mage.svg"), None);
-        // let guy2_mage = load_asset(&Path::new("assets/guy2_mage_mad.svg"), Some(GUY2_RISEN_ANCHOR));
-        // let guy2_mage = load_asset(&Path::new("assets/guy2_mage_filled.svg"), Some(GUY2_MAGE_ANCHOR));
+        // let guy2_mage = load_asset(
+        //     &Path::new("assets/guy2_mage_flat.svg"),
+        //     Some(V2::new(37.347, 82.709)),
+        // );
         let guy2_mage = load_asset(
-            &Path::new("assets/guy2_mage_flat.svg"),
-            Some(V2::new(37.347, 82.709)),
+            &Path::new("assets/guy2_mage_unfilled.svg"),
+            Some(V2::new(40.812, 86.348)),
         );
         let dead_guy2 = load_asset(&Path::new("assets/dead_guy2.svg"), Some(GUY2_DEAD_ANCHOR));
         let cubed_guy2 = load_asset(
@@ -1667,6 +1675,7 @@ impl Assets {
             guy2,
             kill_diamond_around,
             guy2_mage,
+            interventionist_helix: load_asset(Path::new("assets/interventionist helix.svg"), None),
             guy2_flipped,
             dead_guy2,
             guyeye,
@@ -2233,17 +2242,19 @@ pub fn dual_color_patch(
 
 pub fn come_on_down(assets: &Assets, e: ElementTag, bounds: Rect, to: &mut dyn Write) {
     let ea = assets.element(e);
-    come_on_down_specifically(ea, ea, e, bounds, to);
+    come_on_down_specifically(ea, ea, ELEMENT_COLORS_BACK[e], bounds, None, None, to);
 }
 pub fn come_on_down_specifically(
     left_asset: &Asset,
     right_asset: &Asset,
-    ef: ElementTag,
+    el_color: &str,
     bounds: Rect,
+    adjacent_guy: Option<&Asset>,
+    adjacent_out_el: Option<&Asset>, //this one doesn't really fit, so don't use it
     to: &mut dyn Write,
 ) {
-    let ec = ELEMENT_COLORS_BACK[ef];
-    let er = bounds.span().x * 0.19;
+    let sd = bounds.span().x;
+    let er = sd * 0.19;
     let escale = er / BIG_ELEMENT_RAD;
     let sepx = er * 1.26;
     let sepy = er * 0.8;
@@ -2263,11 +2274,17 @@ pub fn come_on_down_specifically(
      transform="translate({},{}) scale({codscale})">
     <path
        id="path50"
-       style="color:#000000;fill:#{ec};stroke-linecap:round;stroke-linejoin:round;-inkscape-stroke:none"
+       style="color:#000000;fill:#{el_color};stroke-linecap:round;stroke-linejoin:round;-inkscape-stroke:none"
        d="M 38.159945 0.0098185221 C 37.498511 0.023905038 36.837434 0.052318903 36.177637 0.0956014 C 28.260067 0.61499139 20.508659 3.2482202 14.083895 8.3576294 C 5.517543 15.170175 -1.2533172e-15 26.47775 0 40.095744 A 9.4499998 9.4499998 0 0 0 9.4490356 49.546847 A 9.4499998 9.4499998 0 0 0 18.900138 40.095744 C 18.900138 31.181933 21.795547 26.370862 25.847518 23.148458 C 29.89949 19.926055 35.796642 18.384631 42.089937 19.060335 C 54.676529 20.411744 67.298735 29.295611 67.298735 48.312297 A 9.4499998 9.4499998 0 0 0 67.402087 49.098295 L 55.604875 49.098295 L 76.933289 65.405827 L 98.261702 49.098295 L 86.158565 49.098295 A 9.4499998 9.4499998 0 0 0 86.197323 48.312297 C 86.197323 20.283577 65.169656 2.5291176 44.107385 0.26768392 C 42.132797 0.055674506 40.144244 -0.032441026 38.159945 0.0098185221 z " />
   </g>"##, codoffset.x, codoffset.y).unwrap();
     left_asset.centered(c1, escale, to);
     right_asset.centered(c2, escale, to);
+    if let Some(guy) = adjacent_guy {
+        guy.by_anchor(c1 + V2::new(0.0, er + sd*0.265), 0.77, to);
+    }
+    if let Some(el) = adjacent_out_el {
+        el.centered_rad(c2 + V2::new(0.0, er + sd*0.06 + er), er, to);
+    }
 }
 
 pub fn overplace(
@@ -2452,12 +2469,15 @@ pub struct FinalGenConf {
     pub water_ice_changing_cards: f64,
     pub cards_that_make_voids: f64,
     pub cards_that_make_tombs: f64,
-    pub land_tile_shape: &'static str,
+    pub land_tile_shape: TileShape,
     pub land_counts: Vec<u8>,
     pub land_surplus_counts: Vec<u8>,
+    pub end_ends: usize,
+    pub end_continues: usize,
     pub gen_svgs: bool,
     pub gen_pngs: bool,
 }
+pub enum TileShape { Hex, Circle }
 impl Default for FinalGenConf {
     fn default() -> Self {
         Self {
@@ -2468,10 +2488,12 @@ impl Default for FinalGenConf {
             kill_cards_for_void_volcano: 3.8,
             kill_cards_for_field: 0.9,
             kill_cards_for_tombs: 0.1,
-            land_tile_shape: "circle",
+            land_tile_shape: TileShape::Circle,
             kill_cards_for_mountain: 0.2,
             water_ice_changing_cards: 3.0,
             cards_that_make_voids: 2.6,
+            end_ends: 3,
+            end_continues: 13,
             cards_that_make_tombs: 0.7,
             land_counts: vec![15, 8, 7, 7],
             land_surplus_counts: vec![6, 6, 6, 6],

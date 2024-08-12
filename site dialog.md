@@ -6,39 +6,32 @@
 
 # a prototype cohabitive game
 
-Optimal Weave is a new kind of game that makes it easy to become more skilful in the way of negotiation.
+<!-- Good games often facilitate some kind of practice that's difficult to get anywhere else. I hope that Optimal Weave will provide helpful inspiration for further development of a [new kind of game](https://makopool.com/peacewagers.html) that we expect to facilitate a richer gamut of dynamics between player characters, as well as a fun practice space for negotiation. -->
 
-Our skill in negotiation determines everything. It speeds collective decisionmaking, it renders difference and disagreement harmless, it delivers us to to better political outcomes, peace. Despite the importance of negotiation, in its naturally occurring form it is rarely made fun, we tend to approach interpersonal conflicts in avoidant and conservative ways, so we don't learn or experiment very much, and our ineptitude in negotiation is implicated in every tragedy, every situation where two parties couldn't develop a mutually agreeable plan together within the limited time they had available, the plan suffered, and what played out was some shade of war, demonstrations measured in wasted life.
+A good game facilitates experiences that are difficult to get anywhere else. Optimal Weave offers experience in the social rhythms of cooperative bargaining, experimental peace-craft, negotiation amid anarchy. We hope it will inspire further <a href="https://makopool.com/peacewagers.html" class="normal_color">cohabitive games</a>, a new genre of multiplayer games that always discuss the realities of conflict but which also allow players to develop alternatives to violence, often tending to be non-zero-sum. We expect this kind of game to facilitate a richer variety of relationships and dynamics between player characters, and when done well, the appeal of that be clear to all.
 
-![](P1_gamegram.png)
+<!-- We designed Optimal Weave as a practicing space for the crucial missing skill of cooperative bargaining, the design of conditions of peace, negotiation. We hope it can provide inspiration for <a href="https://makopool.com/peacewagers.html" class="normal_color">a new kind of game</a>.  non-zero-sum, reckoning with conflict but never closing the door to better alternatives to it. Among other things, we also expect this kind of game to facilitate a richer variety of relationships and dynamics between player characters. -->
 
-There have been no other games like this. Most games are purely competitive, others are purely cooperative. Even games called "semi-cooperative" tend to assign goals to their villains which are perfectly opposed to the goals of the allies ("zero-sum"), for which no compromise is possible, and often these goals are hidden[^1], which makes it difficult to imagine these games playing host to practice in conciliatory dialog.
+<p class="hide_when_wide"><img alt="Optimal Weave 0.1 in play" src="P1_in_play.jpg" class="main_img"></img></p>
 
-We do need a *game* about negotiation. Our real life interpersonal dramas generally make poor learning experiences, punishing explorative play with permanent injuries. A good game is a special context that supports and encourages experimentation and learning that's difficult to get anywhere else.
+Most of the difficulty of collective decisionmaking concerns the skill of negotiation. Skilfull negotiation renders difference and disagreement harmless, improving political outcomes, building peace, *loosening the divergant wills to converge towards the optimal weave*. Negotiation failure is centrally implicated in every tragedy. Every demonstration of force and will that was measured in wasted lives can be blamed on negotiation inefficiencies. So, we think there is probably a craving, out there, that these games can sate.
 
-Optimal Weave is also a lot more legible than real life conflicts tend to be: The abilities, actions and goals of all of the players are out in the open[^1], so when the game ends, we can easily make sense of whatever happened and learn from our experience.
+When negotiation problems pop up in daily life, we tend to approach them in avoidant and conservative ways, we don't experiment or learn quite enough. We are missing a crucial social skill. To lower the stakes of experimental practice in negotiation, we need the ability to try many things in many scenarios in a time-efficient way and then forget and forgive what didn't work, which is to say, what we need is a *game*.
 
-![](P1_cards.png)
+<p class="hide_when_narrow"><img alt="Optimal Weave 0.1 in play" src="P1_in_play.jpg" class="main_img"></img></p>
 
-Optimal Weave presents two levels of play and an additional simpler cohabitive game that can be played with the same pieces, Ritual Cohabitive. The components of P1 can also be thought of as a modular toolset for exploring the cohabitive gamespace. Cohabitive games are so underexplored that I'd expect players to find something interesting wherever they land.
+Optimal Weave presents two levels of play, and an additional simpler cohabitive game that can be played with the same pieces. The components of P1 can also be thought of as a modular toolset for exploring the cohabitive game space. Cohabitive games are so underexplored that I'd expect players to find something interesting wherever they land.
 
-If you do find something really interesting, the community wants to hear your findings. As it has been for any developing genre, the first great cohabitive game will arise from a dialog of experimental works. We will stumble and then we will learn to walk and then we will learn to run. And then when we apply what we've learned to the world's negotiation problems and theoretical deadlocks, we should expect to find something really interesting.
+Let's embark! <a class="special_button" href="#eebie_deebie">**get the game**</a>
 
-Let's embark!
+<img alt="The playing figures laid out over a rolling strip of land tiles. Translucent colorful slimeguys, tall black meeples, squat meeples that appear to be made of pearlescent glue stick, three little men dressed all in white, three cubes, and three wooden sheep" src="P1_figures_with_sheep.jpg" class="main_img"></img>
 
-You can purchase it here: [TODO link] (We're currently not taking any profit. If a lot of people suddenly take interest, we'll increase the price, but otherwise, there's not much point, we just want lots of people to be able to contribute.)
+Or, if you want it free and sooner with components that aren't as nice, <a class="special_button special_button_smaller" href="optimal_weave_pnp_v0_1.zip">**get the print version**</a>. The truth is, if you want to participate in development, it's good to get used to iterating with quick printed paper versions.
 
-There's also a [printable version here](P1_pnp_v1.zip) if you want it cheaper and sooner but with components that aren't as nice.
+You can contribute [here](https://github.com/makoConstruct/P1). Or chat with others about this and other cohabitive games in <a class="element_link" href="https://matrix.to/#/#peacewagers:matrix.org">the cohabitive games scene element channel</a>.
 
-<img src="P1_primary_cards.svg" style="width:250px; padding-top:70px; padding-bottom:70px;"></img>
 
-You can contribute [here](https://github.com/makoConstruct/P1). You can chat with others about it this and other cohabitive games in <a class="element_link" href="https://matrix.to/#/#peacewagers:matrix.org">the cohabitive games scene element channel</a>.
 
-[Game manual](https://dreamshrine.org/P1_manual.html).
+[Game manual](https://dreamshrine.org/OW.1/manual.html).
 
-[^1]:
-    Hidden goals are a common challenge in real world negotiation problems, we'd agree that cohabitive games should discuss the role of deception and opacity in coordination problems, and their dissolution, the elicitation of the true preferences of each party. The author of Optimal Weave 0.1 thinks that this is too steep a challenge to include in early cohabitive games, as hidden goals make it difficult to interpret anything a player does, or to negotiate productively. To imply that hiding our goals is a stable equilibrium will mislead players and make it near impossible for them to *find the optimal weave*.
-    
-    Hidden goals are a pretty horrible mechanic in general. To engage fruitfully with hidden goal situations, players need to have first learned the probability distribution of possible goals (*which goals other players could have*), and what all sorts of goals can look like in motion. Despite those things being useful for navigating through foggy moonless nights, they are more easily learned on a clear day.
-
-🄯 dream shrine 2024
+🄯 <a class="normal_color" href="https://dreamshrine.org">dream shrine</a> 2024
