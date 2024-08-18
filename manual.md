@@ -142,6 +142,10 @@ After scoring consistently above 15 on level 1, you may "transcend" to level 2.
 
 - Cards marked <span><img class="inline_img" src="level2.svg"/></span> start to come into play, and cards marked <span><img class="inline_img" src="level1.svg"/></span> may be removed. Be conscious of which cards you include. Those with the mark of the clown should be considered to be novelties, they drown out the other ingredients and only teach a simple lesson, so those ones should only be played with a few times.
 
+- Start games with more abilities deployed right away.
+
+- Also consider increasing the number of desires or abilities players have, as this always tends to make finding the optimal solution more complex.
+
 - mess around with advanced movement rules, where some land types are a bit more difficult to traverse, imbuing the landscape with more texture:
 
 <div class="row" style="flex-wrap: wrap;">
@@ -155,8 +159,6 @@ After scoring consistently above 15 on level 1, you may "transcend" to level 2.
 
 </div>
 </div>
-
-- Also consider increasing the number of desires or abilities players have, as this always tends to make finding the optimal solution more complex.
 
 - Play larger games with more players.
 

@@ -1,6 +1,6 @@
-This is the repository for the prototype [cohabitive game](https://makopool.com/peacewagers.html), P1.
+This is the repository for the prototype [cohabitive game](https://makopool.com/peacewagers.html), [Optimal Weave, which can be purchased here](https://dreamshrine.org/OW.1/optimal_weave.html).
 
-It contains rust code that generates the cards. It can then invoke inkscape to generate `generated_card_pngs`, which can be dragged straight into thegamecrafter as mini card assets, and then printed and distributed from there.
+It contains rust code that generates the cards. It can then invoke inkscape to generate the pngs, which can be dragged straight into thegamecrafter as mini card assets, and then printed and distributed from there.
 
 ### why generate cards programatically?
 

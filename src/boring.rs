@@ -2542,9 +2542,10 @@ impl FinalGenConf {
 pub struct PnpGen {
     pub gen_svgs: bool,
     pub gen_pngs: bool,
+    pub cutlines_on: bool,
 }
 
-pub fn print_and_play_sheets<I>(assets: &Assets, cards: I, output_dir: &Path)
+pub fn print_and_play_sheets<I>(assets: &Assets, cards: I, output_dir: &Path, cutlines_on: bool)
 where
     I: Iterator<Item = (usize, Rc<Asset>, Rc<Asset>)> + Clone,
 {
@@ -2555,7 +2556,6 @@ where
     let card_count = cards_front.len();
     let tx = 6;
     let ty = 6;
-    let render_cutlines = true;
     let sheets_needed = card_count.div_ceil(tx * ty);
     let page_dims = V2::new(674.688, 873.125);
     let cs = assets.pnpmask.bounds;
@@ -2605,7 +2605,7 @@ where
                 &Displaying(|w| {
                     w.write_all(&inner_first).unwrap();
                     w.write_all(&inner_second).unwrap();
-                    if render_cutlines {
+                    if cutlines_on {
                         //vertical
                         let vertical_line_length = page_dims.y + 2.0;
                         for ci in 0..(tx+1) {
