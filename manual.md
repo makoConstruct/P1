@@ -66,13 +66,15 @@ Beyond that, here are some thoughts and sayings that will help you to convey the
 
 *"The objective within the game is just to score as much as possible for yourself. The objective outside of the game, in the real world, is to learn the way of negotiation, of confronting difference and striving towards the optimal weave."*
 
+*"There is such a thing as a perfect compromise."*
+
 *"The point of the game is to reckon honestly with selfishness and atomization, and then find the sacred patterns of coordination that survive it."*
 
 *"Bicker all you like, but in the end we will all agree, because there will only be one world, and one history, which we will all have to live through together."*
 
 *"Reducing others' scores will not increase your own."*
 
-*"The game is kind of cooperative, but also not. It's cheeky."*
+*"The game is kind of cooperative, but also not. It's cheeky. It's the spicier variety of cooperation."*
 
 *"More than one person can win."*
 
@@ -116,6 +118,12 @@ For the explorers, here's a verdant list of ideas we'd be eager to see tried wit
     
         - I'm considering another approach where players can banish abilities from other players that they do not like. This would do it in a purely competitive game, because the most powerful abilities would be the ones that would tend to be removed, but in a cohabitive game it wouldn't work! If you have good trade relations with other players, they'll often prefer for you to keep your extremely powerful ability. You'll be stuck with it!
 
+- Random events in the event deck?
+
+    - Ways of fighting off ending <span><img class="inline_img" src="end_card_icon.svg"></span> events?/ending events that are designed to be fought against?
+    
+    - Placing some ability acquisitions later on the game? But the game isn't really in play until a player has a full suite of abilities, so later acquisitions should possibly be optional replacements of some present ability? (as described is in the infinite variant)
+
 - We may want mechanics that allow people to fight against or veto the introduction of abilities that break the power balance. I look forward to the contracts people will pen here, eg, "you can have this ability if you promise to only use it in constrained ways", this essentially constitutes the design of new abilities from broader ones.
 
     - Experiment with vetos and votes of support. This may warrant additional mechanics. Having to navigate a tradeoff between getting your own abilities and controlling the abilities others can take would be an interesting alegory for contemporary regulatory dilemmas (assuming those are real dilemmas, though I'm not sure they are. They always end up seeming like a result of incompetence in system design).
@@ -125,10 +133,6 @@ For the explorers, here's a verdant list of ideas we'd be eager to see tried wit
 - If players could score some minimal amount by voting to end the game early, such that this is a preferable move if they're only going to be scoring very small amounts in the late game, this could cut out some tedium, assuming that an endgame where not much is being scored is a boring endgame.
 
 - How about some Gaianism: Sometimes the world itself will have a desire, which is part of everyone's score. It might make some gameplay sense to tilt things a little bit in favor of cooperation. It would make it all feel more respectful towards the land and its whims. But I don't think this is necessary.
-
-- Random events in the event deck?
-
-    - Ways of fighting off ending <span><img class="inline_img" src="end_card_icon.svg"></span> events?/ending events that are designed to be fought against?
 
 Those are mostly just ideas for Optimal Weave, but if you find any of those interesting, I also encourage you to check out [this page of ideas for other cohabitive games](cohabitive_game_ideas.html).
 
@@ -197,7 +201,7 @@ The official names for the teams of agent pieces we've bundled with the game are
 <span style="color:#eeeeee;">●</span> Church (or "Sunday") <br>
 <span style="color:#eeeeee;">●</span> Sheep (or "Flock") <br>
 <span style="color:#3a3a3a;">●</span> Figures (or "Lollards") <br>
-<span style="color:#5a5b4f;">●</span> Cubes (or "Smokies") <br>
+<span style="color:#5a5b4f;">●</span> Cubes (or "Smokes") <br>
 
 ## What are voids? What are tombs?
 

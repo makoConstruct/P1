@@ -382,23 +382,26 @@ fn gen_cards(assets: &Rc<Assets>, conf: &Conf) {
             gather_from(Path::new("hand_made_cards/ends"), &mut cards);
             gather_from(Path::new("hand_made_cards/means"), &mut cards);
             gather_from(Path::new("hand_made_cards/end events"), &mut cards);
-
-            //generate our card-shaped land svgs
-            let land_path = Path::new("land_as_cards");
-            clear_or_create(land_path);
-            let modulo = 6 * 6;
-            let land_counts = make_land_counts(
-                cards.iter().map(|c| c.0).sum::<usize>() % modulo,
-                modulo,
-                &conf.final_gen.as_ref().unwrap().land_counts,
-            );
-            for spec in generation::land_specs_card(&assets, &land_counts)[0]
-                .generator
-                .iter()
-            {
-                write_spec(&spec, conf, land_path);
+            
+            let doing_lands = true; //you could parametize this and do a pnp for people who want land tiles and people who don't... but that's a bother just to save one printed page. They can also just not print that page lmao.
+            if doing_lands {
+                //generate our card-shaped land svgs
+                let land_path = Path::new("land_as_cards");
+                clear_or_create(land_path);
+                let modulo = 6 * 6;
+                let land_counts = make_land_counts(
+                    cards.iter().map(|c| c.0).sum::<usize>() % modulo,
+                    modulo,
+                    &conf.final_gen.as_ref().unwrap().land_counts,
+                );
+                for spec in generation::land_specs_card(&assets, &land_counts)[0]
+                    .generator
+                    .iter()
+                {
+                    write_spec(&spec, conf, land_path);
+                }
+                gather_from(land_path, &mut cards);
             }
-            gather_from(land_path, &mut cards);
 
             print_and_play_sheets(&assets, cards.into_iter(), print_and_play_svgs);
         }

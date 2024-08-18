@@ -2555,13 +2555,14 @@ where
     let card_count = cards_front.len();
     let tx = 6;
     let ty = 6;
+    let render_cutlines = true;
     let sheets_needed = card_count.div_ceil(tx * ty);
     let page_dims = V2::new(674.688, 873.125);
     let cs = assets.pnpmask.bounds;
     let card_scale = (page_dims.x / tx as f64 / cs.x).min(page_dims.y / ty as f64 / cs.y);
     let card_span = cs * card_scale;
 
-    let pass = |cards: &Vec<Rc<Asset>>, is_front: bool| {
+    let do_side = |cards: &Vec<Rc<Asset>>, is_front: bool| {
         let mut cards = cards.iter();
         for sheeti in 0..sheets_needed {
             let side = if is_front { "[face]" } else { "[back]" };
@@ -2597,18 +2598,43 @@ where
                     }; //checked at function start
                 }
             }
-
+            
             svg_outer(
                 page_dims,
                 CARD_BACKGROUND_COLOR,
                 &Displaying(|w| {
                     w.write_all(&inner_first).unwrap();
                     w.write_all(&inner_second).unwrap();
+                    if render_cutlines {
+                        //vertical
+                        let vertical_line_length = page_dims.y + 2.0;
+                        for ci in 0..(tx+1) {
+                            let mut offset = ci as f64 * card_span.x;
+                            if !is_front {
+                                offset = page_dims.x - offset;
+                            }
+                            write!(w,
+                            "<path
+                                style=\"opacity:0.5;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;fill-opacity:1;stroke:#ebebeb;stroke-opacity:1;stroke-dasharray:none\"
+                                d=\"M {offset},-1 V {vertical_line_length}\"
+                                id=\"path1\" />").unwrap();
+                        }
+                        //horizontal
+                        let horizontal_line_length = page_dims.x + 2.0;
+                        for ci in 0..(ty+1) {
+                            let offset = ci as f64 * card_span.y;
+                            write!(w,
+                            "<path
+                                style=\"opacity:0.5;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;fill-opacity:1;stroke:#ebebeb;stroke-opacity:1;stroke-dasharray:none\"
+                                d=\"M -1,{offset} H{horizontal_line_length}\"
+                                id=\"path1\" />").unwrap();
+                        }
+                    }
                 }),
                 &mut w,
             );
         }
     };
-    pass(&cards_front, true);
-    pass(&cards_back, false);
+    do_side(&cards_front, true);
+    do_side(&cards_back, false);
 }
