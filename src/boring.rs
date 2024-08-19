@@ -1452,6 +1452,9 @@ pub struct Assets {
     pub lake: Asset,
     pub ice: Asset,
     pub tomb: Asset,
+    pub grouping1: Asset,
+    pub grouping2: Asset,
+    pub grouping3: Asset,
     pub void: Asset,
     pub blank: Asset,
     pub darker_blank: Asset,
@@ -1611,6 +1614,7 @@ impl Assets {
         let ice = load_asset(&Path::new("assets/ice.svg"), None);
         let tomb = load_asset(&Path::new("assets/tomb.svg"), None);
         let void = load_asset(&Path::new("assets/void.svg"), None);
+        
         let blank = load_asset(&Path::new("assets/blank.svg"), None);
         let darker_blank = load_asset(&Path::new("assets/darker_blank.svg"), None);
         let come_on_down = load_asset(&Path::new("assets/come_on_down.svg"), None);
@@ -1686,6 +1690,9 @@ impl Assets {
             triangle,
             forest,
             mountain,
+            grouping1: load_asset(&Path::new("assets/grouping1.svg"), Some(V2::new(18.065, 18.065))),
+            grouping2: load_asset(&Path::new("assets/grouping2.svg"), Some(V2::new(18.065, 18.065))),
+            grouping3: load_asset(&Path::new("assets/grouping3.svg"), Some(V2::new(35.085, 47.547))),
             volcano,
             lake,
             double_diamond,

@@ -382,7 +382,7 @@ fn gen_cards(assets: &Rc<Assets>, conf: &Conf) {
             gather_from(Path::new("hand_made_cards/ends"), &mut cards);
             gather_from(Path::new("hand_made_cards/means"), &mut cards);
             gather_from(Path::new("hand_made_cards/end events"), &mut cards);
-            
+
             let doing_lands = true; //you could parametize this and do a pnp for people who want land tiles and people who don't... but that's a bother just to save one printed page. They can also just not print that page lmao.
             if doing_lands {
                 //generate our card-shaped land svgs
@@ -403,7 +403,12 @@ fn gen_cards(assets: &Rc<Assets>, conf: &Conf) {
                 gather_from(land_path, &mut cards);
             }
 
-            print_and_play_sheets(&assets, cards.into_iter(), print_and_play_svgs);
+            print_and_play_sheets(
+                &assets,
+                cards.into_iter(),
+                print_and_play_svgs,
+                pnpconf.cutlines_on,
+            );
         }
 
         if pnpconf.gen_pngs {
@@ -555,27 +560,32 @@ fn gen_store_background(conf: &Conf, assets: &Assets) {
     let dimensions = V2::new(1600.0, 600.0);
     let element_radp = 0.9;
     let desired_span_count = 47;
-    let element_sep = dimensions.x/desired_span_count as f64;
-    let element_rad = element_radp*element_sep / 2.0;
-    let guy_rad = element_rad*0.7;
+    let element_sep = dimensions.x / desired_span_count as f64;
+    let element_rad = element_radp * element_sep / 2.0;
+    let guy_rad = element_rad * 0.7;
     let center = dimensions / 2.0;
     let max_rad = dimensions.magnitude() / 2.0;
     let mut out = File::create(&Path::new("store_background.svg")).unwrap();
     let once_through = conf.final_gen.as_ref().unwrap().land_counts.iter();
     let elements_on_selection = once_through.clone().chain(once_through).take(7);
-    let desired_element_total:usize = elements_on_selection.clone().map(|e| *e as usize).sum();
+    let desired_element_total: usize = elements_on_selection.clone().map(|e| *e as usize).sum();
     do_sheet(
         dimensions,
         &Displaying(move |w| {
             let mut spiraller = HexSpiral::new();
-            let mut rng = StdRng::seed_from_u64(90);
-            let mut draws: Vec<(V2, Box<dyn Fn(&mut StdRng, &Assets, &mut dyn Write)>)> = Vec::new();
+            let mut rng = StdRng::seed_from_u64(9237);
+            let tilt_angle = TAU / 24.0;
+            let tilt = nalgebra::Rotation2::new(tilt_angle);
+            use std::f64::consts::TAU;
+            type DrawFunc = Box<dyn Fn(&mut StdRng, &Assets, &mut dyn Write)>;
+            let mut draws: Vec<(V2, DrawFunc)> = Vec::new();
+            let mut later_draws: Vec<DrawFunc> = Vec::new();
             loop {
-                let p = hexify(spiraller.next().unwrap().to_v2())*element_sep;
+                let p = hexify(spiraller.next().unwrap().to_v2()) * element_sep;
                 if p.magnitude() > 1.4 * max_rad {
                     break;
                 }
-                let pp = center + p;
+                let pp = center + tilt * p;
                 //sample according to desired element frequencies
                 let mut select_element_at =
                     (rng.next_u64() as usize % desired_element_total) as isize;
@@ -589,9 +599,28 @@ fn gen_store_background(conf: &Conf, assets: &Assets) {
                         break;
                     }
                 }
-                draws.push((pp, Box::new(move |rng, assets, w|{
-                    assets.element(ei).centered_rad(pp, element_rad, w);
-                })));
+                draws.push((
+                    pp,
+                    Box::new(move |rng, assets, w| {
+                        assets.element(ei).centered_rotr(
+                            pp,
+                            element_rad,
+                            (rng.next_u64() % 1024) as f64 / 1024.0 * TAU,
+                            w,
+                        );
+                    }),
+                ));
+                if rng.next_u64() % 11 == 0 {
+                    later_draws.push(Box::new(move |rng, assets, w| {
+                        let grouping = match rng.next_u64() % 3 {
+                            0 => &assets.grouping1,
+                            1 => &assets.grouping2,
+                            2 => &assets.grouping3,
+                            _ => panic!("modulo broke")
+                        };
+                        grouping.by_anchor_given_rotated(pp, grouping.anchor, 1.0, tilt_angle + (rng.next_u64() % 6) as f64 * TAU/6.0, w);
+                    }));
+                }
                 // if rng.next_u64() % 28 == 0 {
                 //     draws.push((pp, Box::new(move |rng, assets, w|{
                 //         let guy_a = (if rng.next_u64() % 2 == 1 {
@@ -607,6 +636,9 @@ fn gen_store_background(conf: &Conf, assets: &Assets) {
             for d in draws {
                 d.1(&mut rng, assets, w);
             }
+            for d in later_draws {
+                d(&mut rng, assets, w);
+            }
         }),
         &mut out,
     );
@@ -614,7 +646,8 @@ fn gen_store_background(conf: &Conf, assets: &Assets) {
 
 fn main() {
     let assets = Rc::new(Assets::load(Path::new("assets")));
-    let gen_pngs = true;
+    // it's convenient to set this to false when you're debugging so that you can just quickly generate the svgs and check them
+    let gen_pngs = false;
     let conf = Conf {
         output: "generated_card_svgs".to_string(),
         seed: 879,
@@ -629,18 +662,14 @@ fn main() {
         print_and_play_gen: Some(Box::new(PnpGen {
             gen_svgs: true,
             gen_pngs,
+            cutlines_on: true,
         })),
         ..Conf::default()
     };
-    gen_cards(
-        &assets,
-        &conf,
-    );
-    // gen_store_background(&conf, &assets);
+    // gen_cards(&assets, &conf);
+    gen_store_background(&conf, &assets);
     // svg_to_png_using_resvg(&Path::new("simple-case.svg"), &Path::new(""), &get_fonts())
     // render_pngs_with_inkscape();
     // render_pngs_with_resvg();
     // demo_boards(&assets);
-
-    // svg_to_png_using_inkscape(&Path::new("hand_made_cards/end events/endings_continue[face,28].svg"), &Path::new("uh.png"), &get_fonts());
 }
