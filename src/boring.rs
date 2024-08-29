@@ -3,7 +3,7 @@
 use elementtree::WriteOptions;
 use mako_infinite_shuffle::{Cross, Indexing};
 use nalgebra::{Rotation2, Vector2};
-use std::{f64::consts::TAU, fmt::Display, fs::File, io::Write, iter, path::Path, rc::Rc};
+use std::{cell::RefCell, f64::consts::TAU, fmt::Display, fs::File, io::Write, iter, path::Path, rc::Rc};
 
 pub fn from_angle_mag(angle: f64, mag: f64) -> V2 {
     V2::new(angle.cos() * mag, angle.sin() * mag)
@@ -106,21 +106,52 @@ pub const ELEMENT_PAIR_NAMES: [&'static str; 4] =
 pub fn pair_name_for(e: ElementTag) -> &'static str {
     ELEMENT_PAIR_NAMES[e / 2]
 }
-pub const ELEMENT_COLORS_BACK: [&'static str; 8] = [
-    "b5efb9", "94cf9c", "eeeca7", "efcfcf", "c3edf1", "e1eff0", "ebebeb", "969696",
-];
+#[derive(Clone)]
+pub struct LandTheme {
+    colors_back: [&'static str; 8],
+    color_front: [&'static str; 8],
+    asset_paths: [&'static str; 8],
+}
+// we need to be able to const initialize it twice for it to be the initial value of LAND_THEME, clone isn't const
+macro_rules! mako_land_theme {
+    ()=> {
+        LandTheme {
+            colors_back: [
+                "b5efb9", "94cf9c", "eeeca7", "efcfcf", "c3edf1", "e1eff0", "ebebeb", "969696",
+            ],
+            color_front: [
+                "a3e2a7", "7eb47f", "e5e383", "f2b7b7", "a5dae0", "f4fcfd", "dedede", "414141",
+            ],
+            asset_paths: [
+                "assets/field.svg",
+                "assets/forest.svg",
+                "assets/mountain.svg",
+                "assets/volcano.svg",
+                "assets/lake.svg",
+                "assets/ice.svg",
+                "assets/tomb.svg",
+                "assets/void.svg",
+            ]
+        }
+    }
+}
+pub const MAKO_LAND_THEME:LandTheme = mako_land_theme!();
+pub const LAND_THEME: RefCell<LandTheme> = RefCell::new(mako_land_theme!());
 // pub const BOLD_COLOR_FOR_GRAPHIC: &'static str = "4b4b4b";
 pub const BOLD_COLOR_FOR_GRAPHIC: &'static str = "c3c3c3";
-pub const ELEMENT_COLORS_FRONT: [&'static str; 8] = [
-    "a3e2a7", "7eb47f", "e5e383", "f2b7b7", "a5dae0", "f4fcfd", "dedede", "414141",
-];
 pub const DARKER_BLANK_COLOR: &'static str = "c1c1c1";
-pub const fn element_colors_bold(i: ElementTag) -> &'static str {
+pub fn element_color_bold(i: ElementTag) -> &'static str {
     if i != ICE && i != TOMB {
-        ELEMENT_COLORS_FRONT[i]
+        LAND_THEME.borrow().color_front[i]
     } else {
         BOLD_COLOR_FOR_GRAPHIC
     }
+}
+pub fn element_color_front(i: ElementTag) -> &'static str {
+    LAND_THEME.borrow().color_front[i]
+}
+pub fn element_color_back(i: ElementTag) -> &'static str {
+    LAND_THEME.borrow().colors_back[i]
 }
 // macro_rules ! for_each_element {
 //     ($f:ident) => {
@@ -232,8 +263,8 @@ fn anchor_for_grav(grav: Gravity, bounds: V2) -> V2 {
 
 pub fn field_g(center: V2, scale: f64, to: &mut dyn Write) {
     let offset = center - scale * BIG_ELEMENT_DIMENSIONS / 2.0;
-    let color_back = ELEMENT_COLORS_BACK[FIELD];
-    let color_front = ELEMENT_COLORS_FRONT[FIELD];
+    let color_back = element_color_back(FIELD);
+    let color_front = element_color_front(FIELD);
     write!(to,
         r#"<g transform="translate({},{}) scale({})"><g
     inkscape:label="Layer 1"
@@ -311,8 +342,8 @@ pub fn field_g(center: V2, scale: f64, to: &mut dyn Write) {
 }
 pub fn forest_g(center: V2, scale: f64, to: &mut dyn Write) {
     let offset = center - scale * BIG_ELEMENT_DIMENSIONS / 2.0;
-    let color_back = ELEMENT_COLORS_BACK[FOREST];
-    let color_front = ELEMENT_COLORS_FRONT[FOREST];
+    let color_back = element_color_back(FOREST);
+    let color_front = element_color_front(FOREST);
     write!(to,
         r#"<g transform="translate({},{}) scale({})"><g
      inkscape:label="Layer 1"
@@ -807,7 +838,6 @@ pub fn backing(
                 1.0,
                 w,
             );
-            offset += sep + r*2.0;
         }
     });
     let end_bar = Displaying({
@@ -987,7 +1017,7 @@ pub fn road_blob_rad(
     let e2c = unscaled_span / 2.0 + to_corner_element_center;
     let rc = unscaled_span / 2.0 - inner_span / 2.0;
     let offset = center - scale * unscaled_span / 2.0;
-    let color = ELEMENT_COLORS_BACK[road];
+    let color = element_color_back(road);
     write!(to,
         r##"<g
      inkscape:label="Layer 1"
@@ -1546,8 +1576,8 @@ pub fn ring_conversion(
     let ringo = V2::new(-supportr, 7.248);
     let ringr = supportr;
 
-    let ring_color = ELEMENT_COLORS_BACK[ring];
-    let flip_from_color = ELEMENT_COLORS_BACK[opposite_element(ring)];
+    let ring_color = element_color_back(ring);
+    let flip_from_color = element_color_back(opposite_element(ring));
     write!(w, r##"
 <g
      inkscape:label="Layer 1"
@@ -1606,14 +1636,16 @@ impl Assets {
         let guyeye: Asset = load_asset(&Path::new("assets/guyeye.svg"), None);
         let dead_guy = load_asset(&Path::new("assets/dead_guy.svg"), None);
         let altruism = load_asset(&Path::new("assets/altruism.svg"), None);
-        let field = load_asset(&Path::new("assets/field.svg"), None);
-        let forest = load_asset(&Path::new("assets/forest.svg"), None);
-        let mountain = load_asset(&Path::new("assets/mountain.svg"), None);
-        let volcano = load_asset(&Path::new("assets/volcano.svg"), None);
-        let lake = load_asset(&Path::new("assets/lake.svg"), None);
-        let ice = load_asset(&Path::new("assets/ice.svg"), None);
-        let tomb = load_asset(&Path::new("assets/tomb.svg"), None);
-        let void = load_asset(&Path::new("assets/void.svg"), None);
+        
+        let land_paths = LAND_THEME.borrow().asset_paths;
+        let field = load_asset(&Path::new(land_paths[0]), None);
+        let forest = load_asset(&Path::new(land_paths[1]), None);
+        let mountain = load_asset(&Path::new(land_paths[2]), None);
+        let volcano = load_asset(&Path::new(land_paths[3]), None);
+        let lake = load_asset(&Path::new(land_paths[4]), None);
+        let ice = load_asset(&Path::new(land_paths[5]), None);
+        let tomb = load_asset(&Path::new(land_paths[6]), None);
+        let void = load_asset(&Path::new(land_paths[7]), None);
         
         let blank = load_asset(&Path::new("assets/blank.svg"), None);
         let darker_blank = load_asset(&Path::new("assets/darker_blank.svg"), None);
@@ -2019,9 +2051,9 @@ pub fn chain_graphic(
     let bc = V2::new(0.0, 0.0);
     let cc = V2::new(65.070, 0.0);
     let er = 58.674;
-    let ae = ELEMENT_COLORS_BACK[a];
-    let be = ELEMENT_COLORS_BACK[b];
-    let ce = ELEMENT_COLORS_BACK[c];
+    let ae = element_color_back(a);
+    let be = element_color_back(b);
+    let ce = element_color_back(c);
     let scale = r / (tr.x / 2.0);
     let offset = center - scale * tr / 2.0;
     write!(
@@ -2085,8 +2117,8 @@ pub fn joined_pair_graphic_horizontal(
     let bc = V2::new(56.352, 32.535);
     let ac = V2::new(0.0, 0.0);
     let er = 58.674;
-    let ae = ELEMENT_COLORS_BACK[a];
-    let be = ELEMENT_COLORS_BACK[b];
+    let ae = element_color_back(a);
+    let be = element_color_back(b);
     let scale = r / (tr.x / 2.0);
     let offset = center - scale * tr / 2.0;
     write!(
@@ -2134,8 +2166,8 @@ pub fn pair_flip_verticalish(
         &|c, r, w|{
             assets.flip_to(e2).centered_rad(c, r, w);
         },
-        ELEMENT_COLORS_BACK[e1],
-        ELEMENT_COLORS_BACK[opposite_element(e2)],
+        element_color_back(e1),
+        element_color_back(opposite_element(e2)),
         w
     );
 }
@@ -2190,8 +2222,8 @@ pub const FLIP_RINGS_RAD: f64 = FLIP_RINGS_SPAN / 2.0;
 
 pub fn flipping_to(assets: &Assets, e: ElementTag, center: V2, scale: f64, w: &mut dyn Write) {
     let eo = opposite_element(e);
-    let to_color = ELEMENT_COLORS_BACK[e];
-    let from_color = ELEMENT_COLORS_BACK[eo];
+    let to_color = element_color_back(e);
+    let from_color = element_color_back(eo);
     let element_graphic = {
         Displaying(|w| {
             assets
@@ -2217,8 +2249,8 @@ pub fn dual_color_patch(
     bounds: Rect,
     w: &mut dyn Write,
 ) {
-    let color_left = ELEMENT_COLORS_BACK[e1];
-    let color_right = ELEMENT_COLORS_BACK[e2];
+    let color_left = element_color_back(e1);
+    let color_right = element_color_back(e2);
     let splat_span = V2::new(205.18423, 224.67136);
     let scale = bounds.span().component_div(&splat_span).min() * 0.82;
     let offset = bounds.center() - scale * splat_span / 2.0;
@@ -2249,7 +2281,7 @@ pub fn dual_color_patch(
 
 pub fn come_on_down(assets: &Assets, e: ElementTag, bounds: Rect, to: &mut dyn Write) {
     let ea = assets.element(e);
-    come_on_down_specifically(ea, ea, ELEMENT_COLORS_BACK[e], bounds, None, None, to);
+    come_on_down_specifically(ea, ea, element_color_back(e), bounds, None, None, to);
 }
 pub fn come_on_down_specifically(
     left_asset: &Asset,
@@ -2385,8 +2417,8 @@ fn element_flip(from: &Asset, to: &Asset) -> Asset {
             let from = from.clone();
             move |p, s, _rotation, w| {
                 // flip_rings(
-                //     ELEMENT_COLORS_BACK[e],
-                //     ELEMENT_COLORS_BACK[opposite_element(e)],
+                //     element_color_back(e),
+                //     element_color_back(opposite_element(e)),
                 //     &Displaying(|w| to.by_ul(both_dims(FLIP_RINGS_RAD - BIG_ELEMENT_RAD), 1.0, w)),
                 //     // p + both_dims(FLIP_RINGS_RAD),
                 //     p + both_dims(FLIP_RINGS_RAD) * s,

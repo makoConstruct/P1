@@ -30,8 +30,6 @@ Or, if you want it free and sooner with components that aren't as nice, <a class
 
 You can contribute [here](https://github.com/makoConstruct/P1). Or chat with others about this and other cohabitive games in <a class="element_link" href="https://matrix.to/#/#peacewagers:matrix.org">the cohabitive games scene element channel</a>.
 
-
-
-[Game manual](https://dreamshrine.org/OW.1/manual.html).
+[Game manual](https://dreamshrine.org/OW.1/manual.html). [Tabletop Simulator version](https://steamcommunity.com/sharedfiles/filedetails/?id=3315051483).
 
 🄯 <a class="normal_color" href="https://dreamshrine.org">dream shrine</a> 2024

@@ -113,7 +113,7 @@ pub fn end_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                                 er,
                                 w,
                             );
-                            underline(element_colors_bold(e), b, MIDDLE_BOTTOM, hspan, w);
+                            underline(element_color_bold(e), b, MIDDLE_BOTTOM, hspan, w);
                         }
                     })),
                     scores.clone(),
@@ -198,7 +198,7 @@ pub fn end_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                                 er,
                                 w,
                             );
-                            underline(element_colors_bold(e), b, MIDDLE_BOTTOM, hspan, w);
+                            underline(element_color_bold(e), b, MIDDLE_BOTTOM, hspan, w);
                         }
                     })),
                     scores.clone(),
@@ -335,7 +335,7 @@ pub fn end_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                 write!(
                     w,
                     "{}{}",
-                    &Displaying(|w:&mut dyn Write| big_splat(ELEMENT_COLORS_BACK[e], w)),
+                    &Displaying(|w:&mut dyn Write| big_splat(element_color_back(e), w)),
                     &Displaying(|w:&mut dyn Write| ELEMENT_G[e](END_GRAPHIC_CENTER, 0.7, w)),
                 ).unwrap();
             })),
@@ -598,7 +598,7 @@ pub fn end_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
             String::from("scavenger"),
             3,
             "4".to_string(),
-            String::from("a terrible hunger.\n4 points for every agent you kill\n(your own agents don't count)"),
+            String::from("a terrible hunger.\n4 points for every corpse in your possession at the end (killing creates corposes, corpses can be stowed as items and carried around)"),
             vec![],
             0,
             false,
@@ -781,7 +781,6 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                     let all_assets = all_assets.clone();
                     move |w| {
                         let f = all_assets.flip_to(e);
-                        let fr = f.bounds.min() / 2.0;
                         f.centered(center, 1.0, w); 
                     }
                 }),
@@ -836,7 +835,7 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
     //                     let bounds = means_graphic_usual_bounds_shrunk_appropriately();
     //                     let sd = bounds.span().x;
     //                     let center = bounds.center();
-    //                     ring_conversion(center, sd/2.0, assets.element(se), ELEMENT_COLORS_BACK[re], assets.flip_to(re), w);
+    //                     ring_conversion(center, sd/2.0, assets.element(se), element_color_back(re), assets.flip_to(re), w);
     //                     assets.guy2.by_anchor_rad(center, sd*0.13, w);
     //                 }
     //             }),
@@ -906,8 +905,8 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                             &|c, r, w|{
                                 all_assets.flip_either(e).centered_rad(c, r, w);
                             },
-                            ELEMENT_COLORS_BACK[supporting_element],
-                            ELEMENT_COLORS_BACK[e],
+                            element_color_back(supporting_element),
+                            element_color_back(e),
                             w
                         );
                     }
@@ -924,7 +923,6 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
             let supporting_element_name = ELEMENT_NAMES[supporting_element];
             let opposite = opposite_element(e);
             let opposite_name = ELEMENT_NAMES[opposite];
-            let center = card_upper_center();
             CardSpec::means_card(
                 &all_assets,
                 format!("transit {element_name}"),
@@ -944,8 +942,8 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                             &|c, r, w|{
                                 all_assets.flip_to(e).centered_rad(c, r, w);
                             },
-                            ELEMENT_COLORS_BACK[supporting_element],
-                            ELEMENT_COLORS_BACK[opposite_element(e)],
+                            element_color_back(supporting_element),
+                            element_color_back(opposite_element(e)),
                             w
                         );
                     }
@@ -1281,7 +1279,6 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                             let mut hs = HexSpiral::new().layer_iter(2);
                             hs.next();
                             let mut cur_layer = hs.0.layer;
-                            let mut i = 0;
                             while let Some(c) = hs.next() {
                                 let first_layer_distance =
                                     br + sep + hr + (cur_layer - 1) as f64 * (hr * 2.0 + sep);
@@ -1289,7 +1286,6 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                                 let p = bc + hexify(c.to_v2()) * spacing;
                                 asset.darker_blank.centered_rad(p, hrs, w);
                                 cur_layer = hs.0.layer;
-                                i += 1;
                             }
                             asset.flip_to(ek).centered_rad(bc, br, w);
                             guy2(&asset, bc, 1.0, w);
@@ -1553,7 +1549,7 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                                 do_arr(arb + V2::new(0.0, -2.0*arsyh));
                             }
                         }),
-                        format!("move any one agent standing next to a pair of {aen} and {ben} by three lands."),
+                        format!("move any one agent standing near to a pair of {aen} and {ben} by three lands."),
                     )
                 }
             }),
@@ -1714,7 +1710,7 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                             come_on_down_specifically(
                                 assets.element(e),
                                 assets.element(e),
-                                ELEMENT_COLORS_BACK[e],
+                                element_color_back(e),
                                 means_graphic_usual_bounds(),
                                 None, None,
                                 w,
@@ -1744,7 +1740,7 @@ pub fn means_specs(all_assets: &Rc<Assets>) -> Vec<CardGen> {
                     come_on_down_specifically(
                         all_assets.flip_to(e),
                         all_assets.element(et),
-                        ELEMENT_COLORS_BACK[e],
+                        element_color_back(e),
                         means_graphic_usual_bounds(),
                         None, None,
                         w,
@@ -1963,13 +1959,6 @@ pub fn land_circle_bounds() -> Rect {
         br: a + V2::new(99.219, 99.219),
     }
 }
-pub fn land_hex_old_bounds() -> Rect {
-    let a = V2::new(13.174, 9.298);
-    Rect {
-        ul: a,
-        br: a + V2::new(292.189, 257.660),
-    }
-}
 pub fn land_hex_smaller_bounds() -> Rect {
     let a = V2::new(10.075, 16.016);
     Rect {
@@ -1978,17 +1967,16 @@ pub fn land_hex_smaller_bounds() -> Rect {
     }
 }
 
-const mini_hex_dims: V2 = V2::new(119.063, 119.063);
-const old_hex_dims: V2 = V2::new(317.5, 277.8125);
-const mini_circle_dims: V2 = V2::new(119.063, 119.063);
+const MINI_HEX_DIMS: V2 = V2::new(119.063, 119.063);
+const MINI_CIRCLE_DIMS: V2 = V2::new(119.063, 119.063);
 pub fn land_specs_smaller(assets: &Rc<Assets>, repeating: &[u8]) -> Vec<CardGen> {
-    land_specs_dims(assets, repeating, mini_hex_dims, land_hex_smaller_bounds(), false)
+    land_specs_dims(assets, repeating, MINI_HEX_DIMS, land_hex_smaller_bounds(), false)
 }
 pub fn land_specs_card(assets: &Rc<Assets>, repeating: &[u8]) -> Vec<CardGen> {
     land_specs_dims(assets, repeating, CARD_DIMENSIONS, cutline_bounds(), true)
 }
 pub fn land_specs_mini_circles(assets: &Rc<Assets>, repeating: &[u8]) -> Vec<CardGen> {
-    land_specs_dims(assets, repeating, mini_circle_dims, land_circle_bounds(), false)
+    land_specs_dims(assets, repeating, MINI_CIRCLE_DIMS, land_circle_bounds(), false)
 }
 pub fn land_specs_dims(assets: &Rc<Assets>, repeating: &[u8], dims: V2, bounds:Rect, rotated:bool) -> Vec<CardGen> {
     assert_eq!(repeating.len(), 4);
@@ -1998,7 +1986,7 @@ pub fn land_specs_dims(assets: &Rc<Assets>, repeating: &[u8], dims: V2, bounds:R
         Rc::new(move |w: &mut dyn Write| {
             svg_outer(
                 dims,
-                ELEMENT_COLORS_BACK[e],
+                element_color_back(e),
                 &Displaying(
                     {let assets = assets.clone(); let bounds=bounds.clone(); move |w| {
                         assets

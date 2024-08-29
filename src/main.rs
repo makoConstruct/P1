@@ -15,7 +15,6 @@ use std::{
 mod boring;
 pub use boring::*;
 mod generation;
-mod weighted_sampling;
 use noisy_float::prelude::*;
 
 use mako_infinite_shuffle::{rng::LFSRFNTimes, Indexing, OpsRef, Shuffled};
@@ -37,23 +36,10 @@ where
     }
 }
 
-use weighted_sampling::Weighted;
-impl Weighted<CardSpec> for CardSpec {
-    fn weight(&self) -> f64 {
-        self.frequency_modifier
-    }
-    fn transmit(self) -> CardSpec {
-        self
-    }
-}
-
 struct Conf {
-    seed: u64,
     gen_count: usize,
-    micro_deck: bool,
     gen_front: bool,
     gen_back: bool,
-    cut_clip: bool,
     final_gen: Option<Box<FinalGenConf>>,
     print_and_play_gen: Option<Box<PnpGen>>,
     output: String,
@@ -62,12 +48,9 @@ struct Conf {
 impl Default for Conf {
     fn default() -> Self {
         Self {
-            seed: 80,
             gen_count: 1,
             gen_front: true,
-            micro_deck: false,
             gen_back: true,
-            cut_clip: false,
             final_gen: None,
             print_and_play_gen: None,
             check_frequencies: false,
@@ -128,7 +111,6 @@ fn gen_cards(assets: &Rc<Assets>, conf: &Conf) {
 
     if let Some(ref fconf) = conf.final_gen {
         //generates the entire set and winnows them according to the weights of different kinds of cards in the conf
-        let mut rng = StdRng::seed_from_u64(conf.seed);
         let final_means_svgs_path = Path::new("final_means_svgs");
         let final_ends_svgs_path = Path::new("final_ends_svgs");
         let final_land_svgs_path = Path::new("final_land_svgs");
@@ -148,7 +130,6 @@ fn gen_cards(assets: &Rc<Assets>, conf: &Conf) {
             cardgens: &Vec<CardGen>,
             output_dir: &Path,
             conf: &Conf,
-            rng: &mut StdRng,
         ) {
             //generate all possible cards
             prep_clear_dir(output_dir);
@@ -233,8 +214,8 @@ fn gen_cards(assets: &Rc<Assets>, conf: &Conf) {
         }
 
         if fconf.gen_svgs {
-            do_cards("ends", &ends_specs, final_ends_svgs_path, conf, &mut rng);
-            do_cards("means", &means_specs, final_means_svgs_path, conf, &mut rng);
+            do_cards("ends", &ends_specs, final_ends_svgs_path, conf);
+            do_cards("means", &means_specs, final_means_svgs_path, conf);
 
             // I changed my mind, not going to have a separate surplus land deck. There'll just be one deck and we'll instruct users to separate the surplus.
             // ack, as part of budgeting, we'll ignore the surplus_counts and just print the amount of excess that we can afford
@@ -338,6 +319,7 @@ fn gen_cards(assets: &Rc<Assets>, conf: &Conf) {
         if pnpconf.gen_svgs {
             //because of hand_drawn_cards, we have to read from the generated svg files instead of just using cardspecs
             clear_or_create(Path::new("print_and_play"));
+            // [TODO] rewrite this to generate a fresh svg instead of copying svgs in from files, so that we can sort the cardspecs by level and clown status? We could just leave hand-made cards out?
             let gather_from = |path, cards: &mut Vec<(usize, Rc<Asset>, Rc<Asset>)>| {
                 let mut by_name = HashMap::new();
                 let dens = read_dir(Path::new(path)).unwrap();
@@ -468,7 +450,6 @@ fn demo_boards(assets: &Rc<Assets>) {
 use rand::{rngs::StdRng, RngCore, SeedableRng};
 use resvg::usvg::fontdb::Database;
 
-use crate::generation::weights_to_cuts;
 fn get_fonts() -> Database {
     let mut fonts = Database::new();
     // fonts
@@ -529,16 +510,6 @@ fn clear_or_create(path: &Path) {
     }
 }
 
-fn create_maybe(path: &Path) -> bool {
-    if let Ok(_) = read_dir(&path) {
-        false
-    } else {
-        //create otherwise
-        drop(create_dir(&path));
-        true
-    }
-}
-
 fn render_pngs_with_from_to(from: &Path, to: &Path, renderer: fn(&Path, &Path, &Database)) {
     //clear dir if present
 
@@ -562,7 +533,6 @@ fn gen_store_background(conf: &Conf, assets: &Assets) {
     let desired_span_count = 47;
     let element_sep = dimensions.x / desired_span_count as f64;
     let element_rad = element_radp * element_sep / 2.0;
-    let guy_rad = element_rad * 0.7;
     let center = dimensions / 2.0;
     let max_rad = dimensions.magnitude() / 2.0;
     let mut out = File::create(&Path::new("store_background.svg")).unwrap();
@@ -610,7 +580,7 @@ fn gen_store_background(conf: &Conf, assets: &Assets) {
                         );
                     }),
                 ));
-                if rng.next_u64() % 11 == 0 {
+                if rng.next_u64() % 7 == 0 {
                     later_draws.push(Box::new(move |rng, assets, w| {
                         let grouping = match rng.next_u64() % 3 {
                             0 => &assets.grouping1,
@@ -645,13 +615,13 @@ fn gen_store_background(conf: &Conf, assets: &Assets) {
 }
 
 fn main() {
+    // you should set LAND_THEME here if you want a different one, it will be locked in by assets::load, then used in gen_cards. EG: *LAND_THEME.get_mut() = LandTheme { ... }. Also feel free to define your land theme as a constant in boring.rs if you think it's good.
+    // "but mako, the rust way is to pass configuration state as a parameter". No, I'm not rewriting every single fucking function call to take another parameter. A better thing than global state would be silent implicits, propagation down the function call stack rather than up
     let assets = Rc::new(Assets::load(Path::new("assets")));
     // it's convenient to set this to false when you're debugging so that you can just quickly generate the svgs and check them
     let gen_pngs = false;
     let conf = Conf {
         output: "generated_card_svgs".to_string(),
-        seed: 879,
-        micro_deck: false,
         gen_front: true,
         gen_back: true,
         final_gen: Some(Box::new(FinalGenConf {
@@ -666,10 +636,10 @@ fn main() {
         })),
         ..Conf::default()
     };
-    // gen_cards(&assets, &conf);
-    gen_store_background(&conf, &assets);
-    // svg_to_png_using_resvg(&Path::new("simple-case.svg"), &Path::new(""), &get_fonts())
-    // render_pngs_with_inkscape();
-    // render_pngs_with_resvg();
-    // demo_boards(&assets);
+    if true {gen_cards(&assets, &conf);}
+    if false {gen_store_background(&conf, &assets);}
+    if false {svg_to_png_using_resvg(&Path::new("simple-case.svg"), &Path::new(""), &get_fonts())}
+    if false {render_pngs_with_inkscape();}
+    if false {render_pngs_with_resvg();}
+    if false {demo_boards(&assets);}
 }

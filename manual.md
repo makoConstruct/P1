@@ -20,7 +20,7 @@ Separate cards marked with <span><img class="inline_img" style="transform: scale
 
 ## setup
 
-Start by assinging everyone so many randomized desire and ability cards, depending on how many players you have, according to the following figure. Take care not to use any cards marked <span><img class="inline_img" src="level2.svg"></span>. I think their behaviors make the game a bit too complicated for a first session.
+Start by assinging everyone so many randomized desire <span><img class="inline_img_smaller" src="heart.svg"></span> and ability <span><img class="inline_img_smaller" src="hand.svg"></span> cards, depending on how many players you have, according to the following figure. Take care not to use any cards marked <span><img class="inline_img" src="level2.svg"></span>. I think their behaviors make the game a bit too complicated for a first session.
 
 <img class="main_img_sharp" src="player_count.svg">
 
@@ -28,7 +28,7 @@ Start by getting to know your own desires, and how they project meaning onto the
 
 Then get to know everyone else's desires and how they compliment or conflict with yours.
 
-As you do that, depending on how many players there are, lay out land tiles and place everyones' agents into the world according to this figure:
+As you do that, depending on how many players there are, throw down down a pile of land tiles and arrange them and everyones' agents according to this figure:
 
 <img class="main_img_sharp" src="agent_placement.svg">
 
@@ -42,7 +42,7 @@ Game events will also decide when the game ends. Assemble the event deck accordi
 
 ## begin play
 
-Each turn, each of a player's pieces can move once, and apply an ability once, in any order.
+Each turn, each of a player's pieces can move once, apply an ability once, and pick up and drop objects in their current location, in any order.
 
 Turns should be limited to 1 minute (everything that's tricky about real world negotiation is about the way it strains under time constraints). After 1 minute, you must carry out your choice. You don't need to be strict about this, though.
 
@@ -50,7 +50,7 @@ At the end of each player's turn, they should draw an event card. If that event 
 
 As you do this, convert your points into `reward`, which is either fruit or candy or whatever treat you find appropriate, and eat it. We recommend an exchange rate of one date per 8 points (or one dried fig per 12 points). Let players keep leftover points between sessions so that they don't go to waste. If you've won too much `reward` to eat on your own, you *may* share the spoils with others. There are many things about the `reward` system that are wonderful, but one of them is that it makes it very clear how we're supposed to relate to points: You want as much `reward` as you can get, and it doesn't harm you when other players receive `reward`. These things may seem obvious given the `reward` framing, but without it, it can be surprisingly difficult to get board gamers to think of points in this way.
 
-Take a note of your score. If the average of your past 5 games were above 16 (?), that's very good, and you have transcended, you become a being of peace, and you may begin to play level 2 games with other transcended players.<br>●
+Take a note of your score. If the average of your past 5 games were above 16 (?), that's very good, and you have transcended and become a being of peace, and you may begin to host level 2 games.<br>●
 
 To make things easier at first, you may wish to keep your characters' ability cards together for the next game you play. Instead of rerolling an entirely new character, you may prefer to just play a mutation of your previous abilities or desires by replacing a random one with a random new one. It's much easier to orient yourself in a new situation if it's a variation on a scenario you've played recently. Of course, for the purposes of deciding when to move onto level 2, this will make the average scoring less "fair", so factor accordingly.
 
@@ -103,6 +103,14 @@ We're still learning to make Cohabitive games, so let's all explore the cohabiti
 I encourage players to look for new interesting variants of play, and to come and tell us what you found in the <a class="element_link" href="https://matrix.to/#/#peacewagers:matrix.org">element channel</a>.
 
 For the explorers, here's a verdant list of ideas we'd be eager to see tried with Optimal Weave 0.1, or in any other brew:
+
+- Abilities that amputate another player's desire and replace it with a random new one. A partial death that allows the game to continue going and also doesn't quickly converge to bland authoratarianism.
+
+    - This runs into the reward hacking conversation (*some players may ask for their most difficult or low score desires to be amputated*), but it also makes it clear that it's a violent thing that is done to others so maybe it will also help people to figure out that you don't want any of your desires amputated. Especially if we label it amputation.
+    
+- A general thought on reward hacking: In life, it is clear to every person that even when love is difficult, they do not want their love to be amputated, they accept that it is a part of themselves that they must serve and nurture. So we have to put love in the game to teach against reward hacking.
+
+    - There's a nuanced perpsective that humans are attached to some of their desires (love) but not others (eg, the impulse to masturbate, other addictions).
 
 - Consider reusing state between sessions. The game involves learning a lot of intricate strategic relationships, throwing those away before each game seems like an inefficient use of brain.
 
