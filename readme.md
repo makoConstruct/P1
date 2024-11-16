@@ -1,6 +1,8 @@
-This is the repository for the prototype [cohabitive game](https://makopool.com/peacewagers.html), [Optimal Weave, which can be purchased here](https://dreamshrine.org/OW.1/optimal_weave.html).
+This repo concerns the prototype [cohabitive game](https://makopool.com/peacewagers.html), [Optimal Weave, which can be purchased here](https://dreamshrine.org/OW.1/optimal_weave.html).
 
-It contains rust code that generates the cards. It can then invoke inkscape to generate the pngs, which can be dragged straight into thegamecrafter as mini card assets, and then printed and distributed from there.
+You don't have to be a programmer to contribute. If you want to write a new ruleset or mode of play, feel free to just send me the text (by posting it in an [issue](https://github.com/makoConstruct/P1/issues), for instance), and I can put it in.
+
+This repository contains rust code that generates the cards. It can then invoke inkscape to generate the pngs, which can be dragged straight into thegamecrafter as mini card assets, and then printed and distributed from there.
 
 ### why generate cards programatically?
 
